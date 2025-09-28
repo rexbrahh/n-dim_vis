@@ -1,0 +1,125 @@
+:root {
+  color-scheme: dark;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: #020617;
+  color: #e2e8f0;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+
+.app-shell__header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.app-shell__header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-shell__subtitle {
+  font-size: 0.875rem;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.app-shell__main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 0;
+}
+
+.controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.15), transparent 65%);
+}
+
+.controls-panel section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.controls-panel label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.controls-panel input[type="range"] {
+  accent-color: #38bdf8;
+}
+
+.controls-panel__radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.scene-viewport {
+  position: relative;
+  min-height: 0;
+}
+
+.scene-viewport canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+
+.controls-panel__section-header {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.controls-panel__eigenvalues {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.controls-panel__eigenvalues li {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0.4rem;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.controls-panel__eigenvalues li span:nth-child(2) {
+  color: rgba(94, 234, 212, 0.9);
+}
+
+.controls-panel__eigenvalues li span:nth-child(3) {
+  color: rgba(251, 191, 36, 0.9);
+  text-align: right;
+}

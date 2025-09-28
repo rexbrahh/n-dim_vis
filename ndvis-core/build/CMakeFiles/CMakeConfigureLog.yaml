@@ -1,0 +1,475 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Darwin - 24.6.0 - arm64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /etc/profiles/per-user/rexliu/bin/cc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is Clang, found in:
+        /Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/3.31.7/CompilerIdC/a.out
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /etc/profiles/per-user/rexliu/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is Clang, found in:
+        /Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/3.31.7/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM"
+      binary: "/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/etc/profiles/per-user/rexliu/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.7"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM'
+        
+        Run Build Command(s): /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E env VERBOSE=1 /etc/profiles/per-user/rexliu/bin/make -f Makefile cmTC_d124d/fast
+        /etc/profiles/per-user/rexliu/bin/make  -f CMakeFiles/cmTC_d124d.dir/build.make CMakeFiles/cmTC_d124d.dir/build
+        make[1]: Entering directory '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM'
+        Building C object CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o
+        /etc/profiles/per-user/rexliu/bin/cc   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.7   -v -Wl,-v -MD -MT CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -c /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        clang version 19.1.7
+        Target: arm64-apple-darwin
+        Thread model: posix
+        InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin
+        clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+         (in-process)
+         "/nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin/clang-19" -cc1 -triple arm64-apple-macosx15.7.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=all -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -target-cpu apple-m1 -target-feature +zcm -target-feature +zcz -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM -target-linker-version 954.16 -v -fcoverage-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM -resource-dir /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root -dependency-file CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -idirafter /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include -internal-isystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include -fmacro-prefix-map=/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libSystem-B/include -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -x c /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target arm64-apple-darwin24.6.0
+        ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include"
+        ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include
+         /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include
+         /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks (framework directory)
+         /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include
+        End of search list.
+        Linking C executable cmTC_d124d
+        /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d124d.dir/link.txt --verbose=1
+        clang version 19.1.7
+        Target: arm64-apple-darwin
+        Thread model: posix
+        InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin
+         "/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld" -demangle -lto_library /nix/store/6wb8wlgfpqw1n2f0r0x4qqxkp2g67q53-llvm-19.1.7-lib/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 15.7.0 26.0 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_d124d -L/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib -L/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib -L/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -lSystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld64-954.16
+        BUILD 00:00:00 Jan  1 1980
+        configured to support archs: i386 x86_64 x86_64h armv6 armv7 armv7s armv7m armv7k arm64 arm64e arm64_32
+        Library search paths:
+        	/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib
+        	/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib
+        	/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib
+        	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib
+        Framework search paths:
+        	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/
+        /etc/profiles/per-user/rexliu/bin/cc  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.7 -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -o cmTC_d124d
+        make[1]: Leaving directory '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:113 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Effective list of requested architectures (possibly empty)  : ""
+      Effective list of architectures found in the ABI info binary: "arm64"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include]
+          add: [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include]
+          add: [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+        end of search list found
+        collapse include dir [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include] ==> [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include]
+        collapse include dir [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include]
+        collapse include dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include] ==> [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+        implicit include dirs: [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include;/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM']
+        ignore line: []
+        ignore line: [Run Build Command(s): /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E env VERBOSE=1 /etc/profiles/per-user/rexliu/bin/make -f Makefile cmTC_d124d/fast]
+        ignore line: [/etc/profiles/per-user/rexliu/bin/make  -f CMakeFiles/cmTC_d124d.dir/build.make CMakeFiles/cmTC_d124d.dir/build]
+        ignore line: [make[1]: Entering directory '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM']
+        ignore line: [Building C object CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/etc/profiles/per-user/rexliu/bin/cc   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.7   -v -Wl -v -MD -MT CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -c /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang version 19.1.7]
+        ignore line: [Target: arm64-apple-darwin]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin]
+        ignore line: [clang: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "/nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin/clang-19" -cc1 -triple arm64-apple-macosx15.7.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=all -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -target-cpu apple-m1 -target-feature +zcm -target-feature +zcz -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM -target-linker-version 954.16 -v -fcoverage-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-LVPRVM -resource-dir /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root -dependency-file CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -idirafter /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include -internal-isystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include -fmacro-prefix-map=/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libSystem-B/include -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -x c /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target arm64-apple-darwin24.6.0]
+        ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include]
+        ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include]
+        ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [ /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+        ignore line: [End of search list.]
+        ignore line: [Linking C executable cmTC_d124d]
+        ignore line: [/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d124d.dir/link.txt --verbose=1]
+        ignore line: [clang version 19.1.7]
+        ignore line: [Target: arm64-apple-darwin]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin]
+        link line: [ "/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld" -demangle -lto_library /nix/store/6wb8wlgfpqw1n2f0r0x4qqxkp2g67q53-llvm-19.1.7-lib/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 15.7.0 26.0 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_d124d -L/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib -L/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib -L/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o -lSystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a]
+          arg [/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/nix/store/6wb8wlgfpqw1n2f0r0x4qqxkp2g67q53-llvm-19.1.7-lib/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [15.7.0] ==> ignore
+          arg [26.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk] ==> ignore
+          arg [-mllvm] ==> ignore
+          arg [-enable-linkonceodr-outlining] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_d124d] ==> ignore
+          arg [-L/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib] ==> dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib]
+          arg [-L/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib] ==> dir [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib]
+          arg [-L/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib] ==> dir [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib]
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_d124d.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lSystem] ==> lib [System]
+          arg [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a] ==> lib [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a]
+        linker tool for 'C': /nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld
+        Library search paths: [;/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib;/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib;/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib]
+        Framework search paths: [;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/]
+        remove lib [System]
+        remove lib [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib] ==> [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib]
+        collapse library dir [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib] ==> [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib]
+        collapse library dir [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib] ==> [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib]
+        collapse library dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib] ==> [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib]
+        collapse library dir [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib] ==> [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib]
+        collapse library dir [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib] ==> [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib]
+        collapse library dir [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib]
+        collapse framework dir [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks]
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib;/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib;/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib]
+        implicit fwks: [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the C compiler's linker: "/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld" "-v"
+      @(#)PROGRAM:ld PROJECT:ld64-954.16
+      BUILD 00:00:00 Jan  1 1980
+      configured to support archs: i386 x86_64 x86_64h armv6 armv7 armv7s armv7m armv7k arm64 arm64e arm64_32
+      Library search paths:
+      	/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib
+      	/usr/lib
+      	/usr/local/lib
+      Framework search paths:
+      	/Library/Frameworks/
+      	/System/Library/Frameworks/
+      ld: warning: -arch not specified
+      ld: no object files specified
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu"
+      binary: "/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/etc/profiles/per-user/rexliu/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.7"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu'
+        
+        Run Build Command(s): /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E env VERBOSE=1 /etc/profiles/per-user/rexliu/bin/make -f Makefile cmTC_017e2/fast
+        /etc/profiles/per-user/rexliu/bin/make  -f CMakeFiles/cmTC_017e2.dir/build.make CMakeFiles/cmTC_017e2.dir/build
+        make[1]: Entering directory '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu'
+        Building CXX object CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o
+        /etc/profiles/per-user/rexliu/bin/c++   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.7   -v -Wl,-v -MD -MT CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -c /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        clang version 19.1.7
+        Target: arm64-apple-darwin
+        Thread model: posix
+        InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin
+        clang++: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+        ignoring nonexistent directory "/nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin/../include/c++/v1"
+         (in-process)
+         "/nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin/clang++" -cc1 -triple arm64-apple-macosx15.7.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=all -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -target-cpu apple-m1 -target-feature +zcm -target-feature +zcz -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu -target-linker-version 954.16 -v -fcoverage-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu -resource-dir /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root -dependency-file CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -idirafter /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include -isystem /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1 -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1 -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include -internal-isystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include -fmacro-prefix-map=/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libSystem-B/include -fmacro-prefix-map=/nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libcxx-19.1.7-dev/include/c++/v1 -fdeprecated-macro -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -x c++ /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target arm64-apple-darwin24.6.0
+        ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include"
+        ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1
+         /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1
+         /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include
+         /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include
+         /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks (framework directory)
+         /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include
+        End of search list.
+        Linking CXX executable cmTC_017e2
+        /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E cmake_link_script CMakeFiles/cmTC_017e2.dir/link.txt --verbose=1
+        clang version 19.1.7
+        Target: arm64-apple-darwin
+        Thread model: posix
+        InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin
+         "/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld" -demangle -lto_library /nix/store/6wb8wlgfpqw1n2f0r0x4qqxkp2g67q53-llvm-19.1.7-lib/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 15.7.0 26.0 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_017e2 -L/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib -L/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib -L/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lSystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld64-954.16
+        BUILD 00:00:00 Jan  1 1980
+        configured to support archs: i386 x86_64 x86_64h armv6 armv7 armv7s armv7m armv7k arm64 arm64e arm64_32
+        Library search paths:
+        	/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib
+        	/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib
+        	/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib
+        	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib
+        Framework search paths:
+        	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/
+        /etc/profiles/per-user/rexliu/bin/c++  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.7 -Wl,-search_paths_first -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_017e2
+        make[1]: Leaving directory '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:113 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Effective list of requested architectures (possibly empty)  : ""
+      Effective list of architectures found in the ABI info binary: "arm64"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1]
+          add: [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1]
+          add: [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include]
+          add: [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include]
+          add: [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+        end of search list found
+        collapse include dir [/nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1] ==> [/nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1]
+        collapse include dir [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1]
+        collapse include dir [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include] ==> [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include]
+        collapse include dir [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include]
+        collapse include dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include] ==> [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+        implicit include dirs: [/nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1;/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include;/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu']
+        ignore line: []
+        ignore line: [Run Build Command(s): /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E env VERBOSE=1 /etc/profiles/per-user/rexliu/bin/make -f Makefile cmTC_017e2/fast]
+        ignore line: [/etc/profiles/per-user/rexliu/bin/make  -f CMakeFiles/cmTC_017e2.dir/build.make CMakeFiles/cmTC_017e2.dir/build]
+        ignore line: [make[1]: Entering directory '/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu']
+        ignore line: [Building CXX object CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/etc/profiles/per-user/rexliu/bin/c++   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.7   -v -Wl -v -MD -MT CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -c /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang version 19.1.7]
+        ignore line: [Target: arm64-apple-darwin]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin]
+        ignore line: [clang++: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
+        ignore line: [ignoring nonexistent directory "/nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin/../include/c++/v1"]
+        ignore line: [ (in-process)]
+        ignore line: [ "/nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin/clang++" -cc1 -triple arm64-apple-macosx15.7.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=all -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -target-cpu apple-m1 -target-feature +zcm -target-feature +zcz -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu -target-linker-version 954.16 -v -fcoverage-compilation-dir=/Users/rexliu/ndvis/ndvis-core/build/CMakeFiles/CMakeScratch/TryCompile-y02qBu -resource-dir /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root -dependency-file CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -idirafter /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include -isystem /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1 -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1 -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include -internal-isystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include -fmacro-prefix-map=/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libSystem-B/include -fmacro-prefix-map=/nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1=/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-libcxx-19.1.7-dev/include/c++/v1 -fdeprecated-macro -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -x c++ /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 19.1.7 based upon LLVM 19.1.7 default target arm64-apple-darwin24.6.0]
+        ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1]
+        ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1]
+        ignore line: [ /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include]
+        ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include]
+        ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [ /nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/include]
+        ignore line: [End of search list.]
+        ignore line: [Linking CXX executable cmTC_017e2]
+        ignore line: [/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake -E cmake_link_script CMakeFiles/cmTC_017e2.dir/link.txt --verbose=1]
+        ignore line: [clang version 19.1.7]
+        ignore line: [Target: arm64-apple-darwin]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /nix/store/h7s2kf798azdmxpj7fccdirlb1hys3r8-clang-19.1.7/bin]
+        link line: [ "/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld" -demangle -lto_library /nix/store/6wb8wlgfpqw1n2f0r0x4qqxkp2g67q53-llvm-19.1.7-lib/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 15.7.0 26.0 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_017e2 -L/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib -L/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib -L/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lSystem /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a]
+          arg [/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/nix/store/6wb8wlgfpqw1n2f0r0x4qqxkp2g67q53-llvm-19.1.7-lib/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [15.7.0] ==> ignore
+          arg [26.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk] ==> ignore
+          arg [-mllvm] ==> ignore
+          arg [-enable-linkonceodr-outlining] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_017e2] ==> ignore
+          arg [-L/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib] ==> dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib]
+          arg [-L/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib] ==> dir [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib]
+          arg [-L/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib] ==> dir [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib]
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_017e2.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lc++] ==> lib [c++]
+          arg [-lSystem] ==> lib [System]
+          arg [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a] ==> lib [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a]
+        linker tool for 'CXX': /nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld
+        Library search paths: [;/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib;/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib;/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib]
+        Framework search paths: [;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/]
+        remove lib [System]
+        remove lib [/nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib] ==> [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib]
+        collapse library dir [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib] ==> [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib]
+        collapse library dir [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib] ==> [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib]
+        collapse library dir [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib] ==> [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib]
+        collapse library dir [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib] ==> [/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib]
+        collapse library dir [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib] ==> [/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib]
+        collapse library dir [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib]
+        collapse framework dir [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/] ==> [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks]
+        implicit libs: [c++]
+        implicit objs: []
+        implicit dirs: [/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib;/nix/store/xjmm1z747hxzlrcd916cgslp6bpnsi1v-clang-19.1.7-lib/lib;/nix/store/l619460n5l5jgg2y3b3y6k11q4l462d5-libcxx-19.1.7/lib;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/lib]
+        implicit fwks: [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the CXX compiler's linker: "/nix/store/8fgyb2w8zqwg1xmhbi766vvdghihx0m6-cctools-binutils-darwin-wrapper-1010.6/bin/ld" "-v"
+      @(#)PROGRAM:ld PROJECT:ld64-954.16
+      BUILD 00:00:00 Jan  1 1980
+      configured to support archs: i386 x86_64 x86_64h armv6 armv7 armv7s armv7m armv7k arm64 arm64e arm64_32
+      Library search paths:
+      	/nix/store/7yaiv2yk2p9fr5w84wkmwgndgrqzw8lb-libSystem-B/lib
+      	/usr/lib
+      	/usr/local/lib
+      Framework search paths:
+      	/Library/Frameworks/
+      	/System/Library/Frameworks/
+      ld: warning: -arch not specified
+      ld: no object files specified
+...

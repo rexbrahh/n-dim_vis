@@ -1,0 +1,31 @@
+CMakeFiles/ndvis-core.dir/src/pca.cpp.o: \
+  /Users/rexliu/ndvis/ndvis-core/src/pca.cpp \
+  /Users/rexliu/ndvis/ndvis-core/include/ndvis/pca.hpp \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/cstddef \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__config \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__config_site \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__configuration/abi.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__configuration/compiler.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__configuration/platform.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__configuration/availability.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__configuration/language.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__type_traits/enable_if.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__type_traits/integral_constant.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__type_traits/is_integral.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__type_traits/remove_cv.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__type_traits/remove_const.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/__type_traits/remove_volatile.h \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/version \
+  /nix/store/3dwjv57wm7w0dl8fqz4x9dczzflwsny4-libcxx-19.1.7-dev/include/c++/v1/stddef.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/stddef.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/stddef.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/stddef.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_header_macro.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_ptrdiff_t.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_size_t.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_wchar_t.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_null.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_nullptr_t.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_max_align_t.h \
+  /nix/store/k4mvgh65zn6xb4f6zs9kypz4lq8sgmk3-clang-wrapper-19.1.7/resource-root/include/__stddef_offsetof.h \
+  /Users/rexliu/ndvis/ndvis-core/include/ndvis/detail/jacobi.hpp
