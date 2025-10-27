@@ -76,13 +76,15 @@ SliceResult slice_polytope(ConstBufferView vertices, std::size_t vertex_count,
   classify_vertices(vertices, vertex_count, dimension, hyperplane,
                     classifications.data());
 
-  std::size_t intersection_count = 0;
   const std::size_t edge_count = edges.length / 2;
   const std::size_t max_intersections = out_points.length / dimension;
 
+  // Temporary storage for intersections before repacking
+  std::vector<std::vector<float>> temp_intersections;
+  temp_intersections.reserve(max_intersections);
+
   std::vector<float> v0(dimension);
   std::vector<float> v1(dimension);
-  std::vector<float> intersection(dimension);
 
   for (std::size_t e = 0; e < edge_count; ++e) {
     const index_type v0_idx = edges.data[2 * e];
@@ -96,12 +98,12 @@ SliceResult slice_polytope(ConstBufferView vertices, std::size_t vertex_count,
     if (class0 * class1 < 0 || (class0 == 0 && class1 != 0) ||
         (class0 != 0 && class1 == 0)) {
 
-      // Check capacity before writing
-      if (intersection_count >= max_intersections) {
+      // Check capacity before computing
+      if (temp_intersections.size() >= max_intersections) {
         break;  // Output buffer full
       }
 
-      if (out_edge_indices.data && intersection_count >= out_edge_indices.length) {
+      if (out_edge_indices.data && temp_intersections.size() >= out_edge_indices.length) {
         break;  // Edge index buffer full
       }
 
@@ -126,23 +128,26 @@ SliceResult slice_polytope(ConstBufferView vertices, std::size_t vertex_count,
       // Clamp t to [0, 1]
       t = std::max(0.0f, std::min(1.0f, t));
 
-      // Compute intersection point
+      // Compute and store intersection point
+      std::vector<float> intersection(dimension);
       for (std::size_t d = 0; d < dimension; ++d) {
         intersection[d] = v0[d] + t * (v1[d] - v0[d]);
       }
-
-      // Store intersection directly in correct SoA layout
-      // SoA: [x0, x1, x2, ..., y0, y1, y2, ..., z0, z1, z2, ...]
-      for (std::size_t d = 0; d < dimension; ++d) {
-        out_points.data[d * max_intersections + intersection_count] = intersection[d];
-      }
+      temp_intersections.push_back(std::move(intersection));
 
       // Store edge index
       if (out_edge_indices.data) {
-        out_edge_indices.data[intersection_count] = static_cast<index_type>(e);
+        out_edge_indices.data[temp_intersections.size() - 1] = static_cast<index_type>(e);
       }
+    }
+  }
 
-      ++intersection_count;
+  // Repack intersections into contiguous SoA layout
+  // SoA: [x0, x1, x2, ..., x_n-1, y0, y1, y2, ..., y_n-1, z0, z1, z2, ..., z_n-1]
+  const std::size_t intersection_count = temp_intersections.size();
+  for (std::size_t d = 0; d < dimension; ++d) {
+    for (std::size_t i = 0; i < intersection_count; ++i) {
+      out_points.data[d * intersection_count + i] = temp_intersections[i][d];
     }
   }
 
