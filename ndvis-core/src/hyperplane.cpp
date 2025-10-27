@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace ndvis {
 
@@ -47,11 +48,12 @@ float point_to_hyperplane_distance(const float* point,
 void classify_vertices(ConstBufferView vertices, std::size_t vertex_count,
                        std::size_t dimension, const Hyperplane& hyperplane,
                        int* out_classifications) {
-  for (std::size_t v = 0; v < vertex_count; ++v) {
-    float vertex[16];  // Support up to 16D
-    extract_vertex(vertices.data, v, vertex_count, dimension, vertex);
+  std::vector<float> vertex(dimension);
 
-    const float distance = point_to_hyperplane_distance(vertex, hyperplane);
+  for (std::size_t v = 0; v < vertex_count; ++v) {
+    extract_vertex(vertices.data, v, vertex_count, dimension, vertex.data());
+
+    const float distance = point_to_hyperplane_distance(vertex.data(), hyperplane);
 
     if (std::abs(distance) < kEpsilon) {
       out_classifications[v] = 0;  // On hyperplane
@@ -70,12 +72,17 @@ SliceResult slice_polytope(ConstBufferView vertices, std::size_t vertex_count,
   SliceResult result{};
 
   // Classify all vertices
-  int classifications[4096];  // Support up to 4096 vertices
+  std::vector<int> classifications(vertex_count);
   classify_vertices(vertices, vertex_count, dimension, hyperplane,
-                    classifications);
+                    classifications.data());
 
   std::size_t intersection_count = 0;
   const std::size_t edge_count = edges.length / 2;
+  const std::size_t max_intersections = out_points.length / dimension;
+
+  std::vector<float> v0(dimension);
+  std::vector<float> v1(dimension);
+  std::vector<float> intersection(dimension);
 
   for (std::size_t e = 0; e < edge_count; ++e) {
     const index_type v0_idx = edges.data[2 * e];
@@ -89,12 +96,20 @@ SliceResult slice_polytope(ConstBufferView vertices, std::size_t vertex_count,
     if (class0 * class1 < 0 || (class0 == 0 && class1 != 0) ||
         (class0 != 0 && class1 == 0)) {
 
-      float v0[16], v1[16];
-      extract_vertex(vertices.data, v0_idx, vertex_count, dimension, v0);
-      extract_vertex(vertices.data, v1_idx, vertex_count, dimension, v1);
+      // Check capacity before writing
+      if (intersection_count >= max_intersections) {
+        break;  // Output buffer full
+      }
 
-      const float d0 = point_to_hyperplane_distance(v0, hyperplane);
-      const float d1 = point_to_hyperplane_distance(v1, hyperplane);
+      if (out_edge_indices.data && intersection_count >= out_edge_indices.length) {
+        break;  // Edge index buffer full
+      }
+
+      extract_vertex(vertices.data, v0_idx, vertex_count, dimension, v0.data());
+      extract_vertex(vertices.data, v1_idx, vertex_count, dimension, v1.data());
+
+      const float d0 = point_to_hyperplane_distance(v0.data(), hyperplane);
+      const float d1 = point_to_hyperplane_distance(v1.data(), hyperplane);
 
       // Compute interpolation parameter t
       // intersection = v0 + t * (v1 - v0)
@@ -112,14 +127,15 @@ SliceResult slice_polytope(ConstBufferView vertices, std::size_t vertex_count,
       t = std::max(0.0f, std::min(1.0f, t));
 
       // Compute intersection point
-      float intersection[16];
       for (std::size_t d = 0; d < dimension; ++d) {
         intersection[d] = v0[d] + t * (v1[d] - v0[d]);
       }
 
-      // Store intersection in output buffer
-      store_vertex(out_points.data, intersection_count,
-                   out_points.length / dimension, dimension, intersection);
+      // Store intersection directly in correct SoA layout
+      // SoA: [x0, x1, x2, ..., y0, y1, y2, ..., z0, z1, z2, ...]
+      for (std::size_t d = 0; d < dimension; ++d) {
+        out_points.data[d * max_intersections + intersection_count] = intersection[d];
+      }
 
       // Store edge index
       if (out_edge_indices.data) {

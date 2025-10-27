@@ -3,6 +3,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/ndvis-core.dir/src/api.cpp.o.d"
   "CMakeFiles/ndvis-core.dir/src/geometry.cpp.o"
   "CMakeFiles/ndvis-core.dir/src/geometry.cpp.o.d"
+  "CMakeFiles/ndvis-core.dir/src/hyperplane.cpp.o"
+  "CMakeFiles/ndvis-core.dir/src/hyperplane.cpp.o.d"
   "CMakeFiles/ndvis-core.dir/src/jacobi.cpp.o"
   "CMakeFiles/ndvis-core.dir/src/jacobi.cpp.o.d"
   "CMakeFiles/ndvis-core.dir/src/pca.cpp.o"

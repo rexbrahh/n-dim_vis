@@ -4,8 +4,8 @@
 
 
 # Configuration directories and files
-SourceDirectory: /Users/rexliu/ndvis/ndvis-core
-BuildDirectory: /Users/rexliu/ndvis/ndvis-core/build
+SourceDirectory: /Users/rexliu/ndvis/.conductor/pompeii/ndvis-core
+BuildDirectory: /Users/rexliu/ndvis/.conductor/pompeii/ndvis-core/build
 
 # Where to place the cost data store
 CostDataFile: 
@@ -27,8 +27,8 @@ SubmitInactivityTimeout:
 NightlyStartTime: 00:00:00 EDT
 
 # Commands for the build/test/submit cycle
-ConfigureCommand: "/nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake" "/Users/rexliu/ndvis/ndvis-core"
-MakeCommand: /nix/store/mn8piv26gjnq7hvmsg7z97vyqcjdz5vb-cmake-3.31.7/bin/cmake --build . --config "${CTEST_CONFIGURATION_TYPE}"
+ConfigureCommand: "/opt/homebrew/bin/cmake" "/Users/rexliu/ndvis/.conductor/pompeii/ndvis-core"
+MakeCommand: /opt/homebrew/bin/cmake --build . --config "${CTEST_CONFIGURATION_TYPE}"
 DefaultCTestConfigurationType: Release
 
 # version control
@@ -63,8 +63,8 @@ UpdateOptions:
 UpdateType: 
 
 # Compiler info
-Compiler: /etc/profiles/per-user/rexliu/bin/c++
-CompilerVersion: 19.1.7
+Compiler: /usr/bin/c++
+CompilerVersion: 17.0.0.17000319
 
 # Dynamic analysis (MemCheck)
 PurifyCommand: 

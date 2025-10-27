@@ -1,2 +1,2 @@
-ndvis-core-tests 7 0.0015119
+ndvis-core-tests 2 0.0996855
 ---

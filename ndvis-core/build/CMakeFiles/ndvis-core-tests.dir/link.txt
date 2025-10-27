@@ -1,1 +1,1 @@
-/etc/profiles/per-user/rexliu/bin/c++  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -mmacosx-version-min=15.7 -Wl,-search_paths_first -Wl,-headerpad_max_install_names "CMakeFiles/ndvis-core-tests.dir/tests/core_tests.cpp.o" -o ndvis-core-tests  libndvis-core.a
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names "CMakeFiles/ndvis-core-tests.dir/tests/core_tests.cpp.o" -o ndvis-core-tests  libndvis-core.a

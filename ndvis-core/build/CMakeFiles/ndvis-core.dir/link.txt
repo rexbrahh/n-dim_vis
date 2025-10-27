@@ -1,2 +1,2 @@
-/etc/profiles/per-user/rexliu/bin/ar qc libndvis-core.a "CMakeFiles/ndvis-core.dir/src/api.cpp.o" "CMakeFiles/ndvis-core.dir/src/geometry.cpp.o" "CMakeFiles/ndvis-core.dir/src/rotations.cpp.o" "CMakeFiles/ndvis-core.dir/src/projection.cpp.o" "CMakeFiles/ndvis-core.dir/src/qr.cpp.o" "CMakeFiles/ndvis-core.dir/src/pca.cpp.o" "CMakeFiles/ndvis-core.dir/src/jacobi.cpp.o"
-/etc/profiles/per-user/rexliu/bin/ranlib libndvis-core.a
+/usr/bin/ar qc libndvis-core.a "CMakeFiles/ndvis-core.dir/src/api.cpp.o" "CMakeFiles/ndvis-core.dir/src/geometry.cpp.o" "CMakeFiles/ndvis-core.dir/src/rotations.cpp.o" "CMakeFiles/ndvis-core.dir/src/projection.cpp.o" "CMakeFiles/ndvis-core.dir/src/qr.cpp.o" "CMakeFiles/ndvis-core.dir/src/pca.cpp.o" "CMakeFiles/ndvis-core.dir/src/jacobi.cpp.o" "CMakeFiles/ndvis-core.dir/src/hyperplane.cpp.o"
+/usr/bin/ranlib libndvis-core.a
