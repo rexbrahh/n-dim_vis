@@ -6,6 +6,9 @@
 // 1. Read vertex from SoA layout
 // 2. Apply rotation matrix (n×n)
 // 3. Project to 3D using basis (3×n, each column is a basis vector in n-space)
+//
+// LIMITATION: Maximum dimension is 32 due to fixed-size local arrays.
+// For higher dimensions, this shader would need dynamic storage or multiple passes.
 
 struct ProjectionParams {
   dimension: u32,      // n-dimensional space

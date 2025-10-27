@@ -1,6 +1,8 @@
 // Applies Givens rotation to an n-dimensional rotation matrix (in-place).
 // The rotation matrix is stored in row-major order.
 // Each invocation processes one row of the matrix, modifying columns i and j.
+//
+// Note: No dimension limit for this shader (matrix is stored in GPU buffer).
 
 struct RotationPlane {
   i: u32,

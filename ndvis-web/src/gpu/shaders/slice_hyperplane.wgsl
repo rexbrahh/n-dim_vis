@@ -3,12 +3,17 @@
 // For each edge, compute intersection point if the edge crosses the hyperplane.
 //
 // Output: intersection points and metadata for rendering polylines/curves.
+//
+// LIMITATION: Maximum dimension is 32 due to fixed-size local arrays.
+// For higher dimensions, this shader would need dynamic storage or multiple passes.
 
 struct HyperplaneParams {
-  dimension: u32,      // n-dimensional space
-  vertex_count: u32,   // Number of vertices
-  edge_count: u32,     // Number of edges to test
-  b: f32,              // Scalar offset of hyperplane
+  dimension: u32,        // n-dimensional space
+  vertex_count: u32,     // Number of vertices
+  edge_count: u32,       // Number of edges to test
+  max_intersections: u32, // Maximum capacity for intersection buffer
+  b: f32,                // Scalar offset of hyperplane
+  _padding: vec3<u32>,   // Align to 16 bytes
 }
 
 @group(0) @binding(0) var<uniform> params: HyperplaneParams;
@@ -79,8 +84,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
   // Atomically reserve a slot in the output buffer
   let out_idx = atomicAdd(&intersection_count, 1u);
 
-  // Write intersection point to output (SoA layout)
+  // Check capacity bounds to prevent buffer overflow
+  if (out_idx >= params.max_intersections) {
+    return;
+  }
+
+  // Write intersection point to output (SoA layout with correct stride)
   for (var axis = 0u; axis < dim && axis < 32u; axis++) {
-    intersections[axis * params.edge_count + out_idx] = intersection[axis];
+    intersections[axis * params.max_intersections + out_idx] = intersection[axis];
   }
 }

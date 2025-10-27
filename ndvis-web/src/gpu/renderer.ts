@@ -168,6 +168,7 @@ export const createRenderer = async (
           config.dimension,
           config.vertexCount,
           config.edgeCount,
+          hyperplane.maxIntersections,
           hyperplane.b
         );
 
@@ -232,6 +233,7 @@ export const createRenderer = async (
           config.vertexCount,
           buffers.edges,
           config.edgeCount,
+          hyperplane.maxIntersections,
           hyperplane.aNormal,
           hyperplane.b,
           intersections

@@ -108,6 +108,7 @@ export const sliceWithHyperplane = (
   vertexCount: number,
   edges: Uint32Array,
   edgeCount: number,
+  maxIntersections: number,
   aNormal: Float32Array,
   b: number,
   intersections: Float32Array
@@ -145,13 +146,17 @@ export const sliceWithHyperplane = (
     // Check if edge crosses hyperplane
     if (d0 * d1 >= 0) continue;
 
+    // Check capacity bounds to prevent buffer overflow
+    if (intersectionCount >= maxIntersections) break;
+
     // Compute interpolation parameter
     const t = d0 / (d0 - d1);
 
     // Compute intersection point: p = v0 + t * (v1 - v0)
+    // Use correct stride: maxIntersections instead of edgeCount
     for (let axis = 0; axis < dimension; axis++) {
       const p = v0[axis] + t * (v1[axis] - v0[axis]);
-      intersections[axis * edgeCount + intersectionCount] = p;
+      intersections[axis * maxIntersections + intersectionCount] = p;
     }
 
     intersectionCount++;

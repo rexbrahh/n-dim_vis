@@ -183,14 +183,17 @@ export const applyGivensRotations = (
     mappedAtCreation: false,
   });
 
-  const planesData = new Float32Array(planes.length * 4);
+  // Pack struct correctly: i (u32), j (u32), theta (f32), _padding (u32)
+  const planesArrayBuffer = new ArrayBuffer(planes.length * 16);
+  const planesView = new DataView(planesArrayBuffer);
   planes.forEach((plane, idx) => {
-    planesData[idx * 4 + 0] = plane.i;
-    planesData[idx * 4 + 1] = plane.j;
-    planesData[idx * 4 + 2] = plane.theta;
-    planesData[idx * 4 + 3] = 0; // padding
+    const offset = idx * 16;
+    planesView.setUint32(offset + 0, plane.i, true); // little-endian
+    planesView.setUint32(offset + 4, plane.j, true);
+    planesView.setFloat32(offset + 8, plane.theta, true);
+    planesView.setUint32(offset + 12, 0, true); // padding
   });
-  queue.writeBuffer(planesBuffer, 0, planesData);
+  queue.writeBuffer(planesBuffer, 0, planesArrayBuffer);
 
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
@@ -264,6 +267,7 @@ export const sliceWithHyperplane = (
   dimension: number,
   vertexCount: number,
   edgeCount: number,
+  maxIntersections: number,
   b: number
 ): void => {
   if (!geometryBuffers.edges) {
@@ -277,13 +281,21 @@ export const sliceWithHyperplane = (
 
   // Create uniform buffer for params
   const paramsBuffer = device.createBuffer({
-    size: 16, // vec4 with padding
+    size: 32, // struct HyperplaneParams with padding: u32×4 + f32 + vec3<u32>
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     mappedAtCreation: false,
   });
 
-  const paramsData = new Float32Array([dimension, vertexCount, edgeCount, b]);
-  queue.writeBuffer(paramsBuffer, 0, paramsData);
+  // Pack struct correctly: dimension, vertex_count, edge_count, max_intersections (u32), b (f32), padding (vec3<u32>)
+  const paramsArrayBuffer = new ArrayBuffer(32);
+  const paramsView = new DataView(paramsArrayBuffer);
+  paramsView.setUint32(0, dimension, true);
+  paramsView.setUint32(4, vertexCount, true);
+  paramsView.setUint32(8, edgeCount, true);
+  paramsView.setUint32(12, maxIntersections, true);
+  paramsView.setFloat32(16, b, true);
+  // Remaining 12 bytes are padding (zeros by default)
+  queue.writeBuffer(paramsBuffer, 0, paramsArrayBuffer);
 
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
