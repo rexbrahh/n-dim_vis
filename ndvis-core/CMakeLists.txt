@@ -13,6 +13,7 @@ add_library(ndvis-core STATIC
   src/qr.cpp
   src/pca.cpp
   src/jacobi.cpp
+  src/hyperplane.cpp
 )
 
 target_include_directories(ndvis-core
