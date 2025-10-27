@@ -9,6 +9,7 @@
 #include "ndvis/rotations.hpp"
 #include "ndvis/types.hpp"
 #include "ndvis/pca.hpp"
+#include "ndvis/hyperplane.hpp"
 
 namespace {
 constexpr float kEpsilon = 1e-5f;
@@ -245,6 +246,153 @@ int main() {
         norm += value * value;
       }
       assert(approx_equal(norm, 1.0f, 1e-3f));
+    }
+  }
+
+  // Test hyperplane distance computation
+  {
+    const std::size_t dimension = 3;
+    float normal[3] = {1.0f, 0.0f, 0.0f};  // x-axis normal
+    const float offset = 0.0f;  // hyperplane through origin
+
+    ndvis::Hyperplane hyperplane{normal, dimension, offset};
+
+    float point1[3] = {1.0f, 0.0f, 0.0f};
+    float point2[3] = {-1.0f, 0.0f, 0.0f};
+    float point3[3] = {0.0f, 1.0f, 0.0f};
+
+    const float dist1 = ndvis::point_to_hyperplane_distance(point1, hyperplane);
+    const float dist2 = ndvis::point_to_hyperplane_distance(point2, hyperplane);
+    const float dist3 = ndvis::point_to_hyperplane_distance(point3, hyperplane);
+
+    assert(approx_equal(dist1, 1.0f));
+    assert(approx_equal(dist2, -1.0f));
+    assert(approx_equal(dist3, 0.0f));
+  }
+
+  // Test vertex classification
+  {
+    const std::size_t dimension = 3;
+    const std::size_t vertex_count = ndvis_hypercube_vertex_count(dimension);
+
+    float vertices[3 * 8] = {0.0f};
+    unsigned int edges[12 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 3 * 8};
+    NdvisIndexBuffer edge_buffer{edges, 12 * 2};
+    ndvis_generate_hypercube(dimension, vertex_buffer, edge_buffer);
+
+    float normal[3] = {1.0f, 0.0f, 0.0f};
+    const float offset = 0.0f;
+
+    ndvis::Hyperplane hyperplane{normal, dimension, offset};
+
+    int classifications[8] = {0};
+    ndvis::classify_vertices(
+        ndvis::ConstBufferView{vertices, 3 * 8},
+        vertex_count,
+        dimension,
+        hyperplane,
+        classifications
+    );
+
+    // Half the cube vertices should be on each side
+    int positive_count = 0;
+    int negative_count = 0;
+    for (std::size_t i = 0; i < vertex_count; ++i) {
+      if (classifications[i] > 0) positive_count++;
+      if (classifications[i] < 0) negative_count++;
+    }
+    assert(positive_count == 4);
+    assert(negative_count == 4);
+  }
+
+  // Test hypercube slicing with hyperplane
+  {
+    const std::size_t dimension = 3;
+    const std::size_t vertex_count = ndvis_hypercube_vertex_count(dimension);
+    const std::size_t edge_count = ndvis_hypercube_edge_count(dimension);
+
+    float vertices[3 * 8] = {0.0f};
+    unsigned int edges[12 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 3 * 8};
+    NdvisIndexBuffer edge_buffer{edges, 12 * 2};
+    ndvis_generate_hypercube(dimension, vertex_buffer, edge_buffer);
+
+    // Slice with x = 0 plane
+    float normal[3] = {1.0f, 0.0f, 0.0f};
+    const float offset = 0.0f;
+
+    ndvis::Hyperplane hyperplane{normal, dimension, offset};
+
+    float intersection_points[3 * 12] = {0.0f};  // max edge_count intersections
+    unsigned int intersection_edge_indices[12] = {0};
+
+    ndvis::SliceResult result = ndvis::slice_polytope(
+        ndvis::ConstBufferView{vertices, 3 * 8},
+        vertex_count,
+        dimension,
+        ndvis::ConstIndexBufferView{edges, 12 * 2},
+        hyperplane,
+        ndvis::BufferView{intersection_points, 3 * 12},
+        ndvis::IndexBufferView{intersection_edge_indices, 12}
+    );
+
+    // A cube sliced by x=0 should produce 4 intersection points
+    // (the square cross-section)
+    assert(result.intersection_count == 4);
+
+    // All intersection points should have x ≈ 0
+    for (std::size_t i = 0; i < result.intersection_count; ++i) {
+      const float x = intersection_points[0 * result.intersection_count + i];
+      assert(approx_equal(x, 0.0f));
+    }
+  }
+
+  // Test level-set concept with 4D hypercube
+  {
+    const std::size_t dimension = 4;
+    const std::size_t vertex_count = ndvis_hypercube_vertex_count(dimension);
+    const std::size_t edge_count = ndvis_hypercube_edge_count(dimension);
+
+    float vertices[4 * 16] = {0.0f};
+    unsigned int edges[32 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 4 * 16};
+    NdvisIndexBuffer edge_buffer{edges, 32 * 2};
+    ndvis_generate_hypercube(dimension, vertex_buffer, edge_buffer);
+
+    // Slice 4D cube with w = 0 hyperplane
+    float normal[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    const float offset = 0.0f;
+
+    NdvisHyperplane hyperplane{normal, dimension, offset};
+
+    float intersection_points[4 * 32] = {0.0f};
+    unsigned int intersection_edge_indices[32] = {0};
+
+    NdvisBuffer out_points{intersection_points, 4 * 32};
+    NdvisIndexBuffer out_edge_indices{intersection_edge_indices, 32};
+
+    NdvisSliceResult result = ndvis_slice_polytope(
+        vertex_buffer,
+        vertex_count,
+        dimension,
+        edge_buffer,
+        hyperplane,
+        out_points,
+        out_edge_indices
+    );
+
+    // 4D cube sliced by w=0 should produce 8 intersection points
+    // (resulting in a 3D cube cross-section)
+    assert(result.intersection_count == 8);
+
+    // All intersection points should have w ≈ 0
+    for (std::size_t i = 0; i < result.intersection_count; ++i) {
+      const float w = intersection_points[3 * result.intersection_count + i];
+      assert(approx_equal(w, 0.0f));
     }
   }
 
