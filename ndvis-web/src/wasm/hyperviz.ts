@@ -288,9 +288,24 @@ const createGradientOverlay = (
   scale: number
 ): Float32Array => {
   const dimension = geometry.dimension;
+  const normalized = ensureSizedArray(Float32Array.from(gradient), dimension);
+
+  let norm = 0;
+  for (let i = 0; i < dimension; i += 1) {
+    const value = normalized[i];
+    norm += value * value;
+  }
+  norm = Math.sqrt(norm);
+  if (norm === 0) {
+    return null;
+  }
+  for (let i = 0; i < dimension; i += 1) {
+    normalized[i] /= norm;
+  }
+
   const endPointND = new Float32Array(dimension);
   for (let i = 0; i < dimension; i += 1) {
-    endPointND[i] = probePoint[i] + (gradient[i] ?? 0) * scale;
+    endPointND[i] = probePoint[i] + normalized[i] * scale;
   }
 
   const start = projectPointTo3(geometry, probePoint);
@@ -308,38 +323,36 @@ const createTangentPatch = (
   const dimension = geometry.dimension;
   const grad = ensureSizedArray(Float32Array.from(gradient), dimension);
 
-  // Normalize gradient
-  let norm = 0;
-  for (let i = 0; i < dimension; i += 1) {
-    const value = grad[i];
-    norm += value * value;
-  }
-  norm = Math.sqrt(norm);
-  if (norm === 0) {
+  if (dimension < 2) {
     return null;
   }
 
+  let gradNorm = 0;
   for (let i = 0; i < dimension; i += 1) {
-    grad[i] /= norm;
+    gradNorm += grad[i] * grad[i];
+  }
+  gradNorm = Math.sqrt(gradNorm);
+  if (gradNorm === 0) {
+    return null;
+  }
+  for (let i = 0; i < dimension; i += 1) {
+    grad[i] /= gradNorm;
   }
 
-  // Build two orthonormal tangent directions via Gram-Schmidt
+  let minIndex = 0;
+  for (let i = 1; i < dimension; i += 1) {
+    if (Math.abs(grad[i]) < Math.abs(grad[minIndex])) {
+      minIndex = i;
+    }
+  }
+  const secondIndex = (minIndex + 1) % dimension;
+
   const tangentU = new Float32Array(dimension);
-  const tangentV = new Float32Array(dimension);
-
-  // Choose arbitrary vector not parallel to grad for tangentU
-  for (let i = 0; i < dimension; i += 1) {
-    tangentU[i] = i === 0 ? grad.length : 1;
-  }
-  // Project out gradient component
-  let dotGU = 0;
-  for (let i = 0; i < dimension; i += 1) {
-    dotGU += grad[i] * tangentU[i];
-  }
+  tangentU[minIndex] = 1;
+  const dotGU = grad[minIndex];
   for (let i = 0; i < dimension; i += 1) {
     tangentU[i] -= dotGU * grad[i];
   }
-  // Normalize
   let normU = 0;
   for (let i = 0; i < dimension; i += 1) {
     normU += tangentU[i] * tangentU[i];
@@ -352,16 +365,18 @@ const createTangentPatch = (
     tangentU[i] /= normU;
   }
 
-  // tangentV = grad × tangentU (approximated via orthonormal basis construction)
+  const tangentV = new Float32Array(dimension);
+  tangentV[secondIndex] = 1;
+  const dotGV = grad[secondIndex];
   for (let i = 0; i < dimension; i += 1) {
-    tangentV[i] = grad[i];
+    tangentV[i] -= dotGV * grad[i];
   }
   let dotUV = 0;
   for (let i = 0; i < dimension; i += 1) {
     dotUV += tangentU[i] * tangentV[i];
   }
   for (let i = 0; i < dimension; i += 1) {
-    tangentV[i] -= dotUV * tangentU[i] + grad[i];
+    tangentV[i] -= dotUV * tangentU[i];
   }
   let normV = 0;
   for (let i = 0; i < dimension; i += 1) {
@@ -401,8 +416,21 @@ const computeLevelSets = async (
   geometry: GeometryState,
   values: number[]
 ): Promise<Float32Array[] | null> => {
-  // Placeholder: reuse hyperplane slicing logic by sampling edges and tagging sign changes
   if (!values.length) {
+    return null;
+  }
+
+  const inputArrays: number[][] = [];
+  for (let axis = 0; axis < geometry.dimension; axis += 1) {
+    const arr = new Array<number>(geometry.vertexCount);
+    for (let v = 0; v < geometry.vertexCount; v += 1) {
+      arr[v] = geometry.vertices[axis * geometry.vertexCount + v];
+    }
+    inputArrays.push(arr);
+  }
+
+  const [evalErr, vertexValues] = runtime.module.evalBatch(program, inputArrays);
+  if (evalErr !== ErrorCode.OK || !vertexValues) {
     return null;
   }
 
@@ -410,36 +438,26 @@ const computeLevelSets = async (
   for (const value of values) {
     const segments: number[] = [];
 
-    const ndPoint = new Float32Array(geometry.dimension);
-    const ndPointB = new Float32Array(geometry.dimension);
-
-    const dotVertices = (data: Float32Array, index: number, target: Float32Array) => {
-      for (let axis = 0; axis < geometry.dimension; axis += 1) {
-        target[axis] = data[axis * geometry.vertexCount + index];
-      }
-    };
-
     for (let edge = 0; edge < geometry.edgeCount; edge += 1) {
       const v0 = geometry.edges[edge * 2];
       const v1 = geometry.edges[edge * 2 + 1];
 
-      dotVertices(geometry.vertices, v0, ndPoint);
-      dotVertices(geometry.vertices, v1, ndPointB);
+      const f0 = vertexValues[v0] - value;
+      const f1 = vertexValues[v1] - value;
 
-      const [, f0] = runtime.module.eval(program, Array.from(ndPoint));
-      const [, f1] = runtime.module.eval(program, Array.from(ndPointB));
-
-      if ((f0 - value) === 0 && (f1 - value) === 0) {
+      if (f0 === 0 && f1 === 0) {
         continue;
       }
 
-      if ((f0 - value) === 0 || (f1 - value) === 0 || (f0 - value) * (f1 - value) < 0) {
+      if (f0 === 0 || f1 === 0 || f0 * f1 < 0) {
         const denom = f0 - f1;
-        const t = Math.abs(denom) > 1e-6 ? (f0 - value) / denom : 0;
+        const t = Math.abs(denom) > 1e-6 ? f0 / denom : 0;
 
         const intersection = new Float32Array(geometry.dimension);
         for (let axis = 0; axis < geometry.dimension; axis += 1) {
-          intersection[axis] = ndPoint[axis] + t * (ndPointB[axis] - ndPoint[axis]);
+          const a = geometry.vertices[axis * geometry.vertexCount + v0];
+          const b = geometry.vertices[axis * geometry.vertexCount + v1];
+          intersection[axis] = a + t * (b - a);
         }
 
         const projected = projectPointTo3(geometry, intersection);
