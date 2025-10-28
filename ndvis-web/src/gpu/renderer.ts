@@ -49,10 +49,6 @@ type WebGPURendererState = {
   hyperplaneBuffers: WebGPU.HyperplaneBuffers | null;
 };
 
-type WebGL2RendererState = {
-  context: WebGL2.WebGL2Context;
-};
-
 export const createRenderer = async (
   canvas: HTMLCanvasElement,
   wasm: NdvisBindings
@@ -197,13 +193,14 @@ export const createRenderer = async (
   // Fallback to WebGL2
   const webgl2Context = await WebGL2.initWebGL2(canvas, wasm);
   if (webgl2Context) {
-    const state: WebGL2RendererState = { context: webgl2Context };
-
     return {
       mode: "webgl2",
       dispose: () => {},
       applyRotations: (planes: RotationPlane[]) => {
-        // WebGL2 fallback uses CPU/WASM - no-op here, handled in projectTo3D
+        if (planes.length === 0) {
+          return;
+        }
+        console.warn("WebGL2 renderer defers Givens rotations to CPU projection.");
       },
       projectTo3D: async (buffers: RenderBuffers, config: GeometryConfig) => {
         // Use CPU/WASM fallback
