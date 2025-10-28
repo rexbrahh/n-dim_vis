@@ -50,6 +50,7 @@ type HyperSceneProps = {
 const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneProps) => {
   const { gl } = useThree();
   const dimension = useAppState((state) => state.dimension);
+  const geometry = useAppState((state) => state.geometry);
 
   const [renderer, setRenderer] = useState<RendererHandle | null>(null);
   const [positions3d, setPositions3d] = useState<Float32Array | null>(null);
@@ -82,7 +83,7 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
     };
   }, [gl]);
 
-  // Project demo geometry whenever dimension or renderer changes
+  // Project geometry whenever source data or renderer changes
   useEffect(() => {
     if (!renderer) {
       return;
@@ -92,40 +93,20 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
 
     (async () => {
       try {
-        const safeDimension = Math.max(1, Math.min(dimension, 12));
-        const vertexCount = Math.min(1 << safeDimension, 4096);
-
-        const vertices = new Float32Array(safeDimension * vertexCount);
-        for (let i = 0; i < vertexCount; i += 1) {
-          for (let axis = 0; axis < safeDimension; axis += 1) {
-            vertices[axis * vertexCount + i] = ((i >> axis) & 1) * 2 - 1;
-          }
-        }
-
-        const rotationMatrix = new Float32Array(safeDimension * safeDimension);
-        for (let axis = 0; axis < safeDimension; axis += 1) {
-          rotationMatrix[axis * safeDimension + axis] = 1;
-        }
-
-        const basis = new Float32Array(3 * safeDimension);
-        for (let component = 0; component < 3; component += 1) {
-          if (component < safeDimension) {
-            basis[component * safeDimension + component] = 1;
-          }
-        }
-
-        const positions = new Float32Array(vertexCount * 3);
+        const positions = new Float32Array(geometry.vertexCount * 3);
 
         const buffers: RenderBuffers = {
-          vertices,
-          rotationMatrix,
-          basis,
+          vertices: geometry.vertices,
+          rotationMatrix: geometry.rotationMatrix,
+          basis: geometry.basis,
           positions3d: positions,
+          edges: geometry.edges,
         };
 
         const config: GeometryConfig = {
-          dimension: safeDimension,
-          vertexCount,
+          dimension,
+          vertexCount: geometry.vertexCount,
+          edgeCount: geometry.edgeCount,
         };
 
         const projected = await renderer.projectTo3D(buffers, config);
@@ -140,7 +121,7 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
     return () => {
       cancelled = true;
     };
-  }, [renderer, dimension]);
+  }, [renderer, geometry, dimension]);
 
   useEffect(() => {
     if (positions3d && geometryRef.current) {

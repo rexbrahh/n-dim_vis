@@ -57,6 +57,16 @@ export type OverlayState = {
   tangentPatch: Float32Array | null;
 };
 
+export type GeometryState = {
+  dimension: number;
+  vertexCount: number;
+  edgeCount: number;
+  vertices: Float32Array; // SoA layout (dimension × vertexCount)
+  edges: Uint32Array; // pairs (u, v)
+  rotationMatrix: Float32Array; // row-major dimension × dimension
+  basis: Float32Array; // column-major 3 × dimension
+};
+
 export type ComputeStatus = {
   isComputing: boolean;
   lastError: string | null;
@@ -96,6 +106,9 @@ type AppState = {
   overlays: OverlayState;
   setOverlays: (overlays: Partial<OverlayState>) => void;
 
+  geometry: GeometryState;
+  setGeometry: (geometry: GeometryState) => void;
+
   // Compute status
   computeStatus: ComputeStatus;
   setComputeStatus: (status: Partial<ComputeStatus>) => void;
@@ -130,6 +143,8 @@ export const useAppState = create<AppState>((set, get) => ({
   dimension: 4,
   setDimension: (dimension) => {
     const { basis, eigenvalues } = computePcaFallback(dimension);
+    const geometry = generateHypercubeGeometry(dimension);
+
     set((state) => {
       const resizedCoefficients = new Float32Array(dimension);
       resizedCoefficients.set(
@@ -157,11 +172,20 @@ export const useAppState = create<AppState>((set, get) => ({
           ...state.calculus,
           probePoint: resizedProbePoint,
         },
+        geometry,
       };
     });
+
+    void get().triggerRecompute();
   },
   rotationPlanes: [],
-  setRotationPlanes: (rotationPlanes) => set({ rotationPlanes }),
+  setRotationPlanes: (rotationPlanes) => set((state) => ({
+    rotationPlanes,
+    geometry: {
+      ...state.geometry,
+      rotationMatrix: applyRotationPlanes(state.dimension, rotationPlanes),
+    },
+  })),
   basis: "standard",
   setBasis: (basis) => set({ basis }),
   pcaBasis: initialPca.basis,
@@ -232,6 +256,9 @@ export const useAppState = create<AppState>((set, get) => ({
     overlays: { ...state.overlays, ...overlays },
   })),
 
+  geometry: generateHypercubeGeometry(4),
+  setGeometry: (geometry) => set({ geometry }),
+
   // Compute status
   computeStatus: {
     isComputing: false,
@@ -253,6 +280,7 @@ export const useAppState = create<AppState>((set, get) => ({
       const { computeOverlays } = await import("@/wasm/hyperviz");
 
       const result = await computeOverlays(
+        state.geometry,
         state.hyperplane,
         state.functionConfig,
         state.calculus,
@@ -288,3 +316,88 @@ export const useAppState = create<AppState>((set, get) => ({
     }
   },
 }));
+
+// --- helpers ----------------------------------------------------------------
+
+const generateHypercubeGeometry = (dimension: number): GeometryState => {
+  const vertexCount = Math.max(1, 1 << Math.min(dimension, 12));
+  const edgeCount = dimension * (vertexCount >> 1);
+
+  const vertices = new Float32Array(dimension * vertexCount);
+  for (let axis = 0; axis < dimension; axis += 1) {
+    const axisOffset = axis * vertexCount;
+    for (let v = 0; v < vertexCount; v += 1) {
+      const bit = (v >> axis) & 1;
+      vertices[axisOffset + v] = bit === 1 ? 1 : -1;
+    }
+  }
+
+  const edges = new Uint32Array(edgeCount * 2);
+  let edgeCursor = 0;
+  for (let axis = 0; axis < dimension; axis += 1) {
+    const mask = 1 << axis;
+    for (let v = 0; v < vertexCount; v += 1) {
+      const neighbor = v ^ mask;
+      if (v < neighbor) {
+        edges[edgeCursor++] = v;
+        edges[edgeCursor++] = neighbor;
+      }
+    }
+  }
+
+  const rotationMatrix = createIdentityMatrix(dimension);
+  const basis = createStandardBasis3(dimension);
+
+  return {
+    dimension,
+    vertexCount,
+    edgeCount,
+    vertices,
+    edges,
+    rotationMatrix,
+    basis,
+  };
+};
+
+const createIdentityMatrix = (dimension: number): Float32Array => {
+  const matrix = new Float32Array(dimension * dimension);
+  for (let i = 0; i < dimension; i += 1) {
+    matrix[i * dimension + i] = 1;
+  }
+  return matrix;
+};
+
+const createStandardBasis3 = (dimension: number): Float32Array => {
+  const basis = new Float32Array(3 * dimension);
+  for (let component = 0; component < 3; component += 1) {
+    if (component < dimension) {
+      basis[component * dimension + component] = 1;
+    }
+  }
+  return basis;
+};
+
+const applyRotationPlanes = (dimension: number, planes: RotationPlane[]): Float32Array => {
+  const matrix = createIdentityMatrix(dimension);
+
+  for (const plane of planes) {
+    const { i, j, theta } = plane;
+    if (i >= dimension || j >= dimension) continue;
+
+    const c = Math.cos(theta);
+    const s = Math.sin(theta);
+
+    for (let row = 0; row < dimension; row += 1) {
+      const idxI = row * dimension + i;
+      const idxJ = row * dimension + j;
+
+      const a = matrix[idxI];
+      const b = matrix[idxJ];
+
+      matrix[idxI] = c * a - s * b;
+      matrix[idxJ] = s * a + c * b;
+    }
+  }
+
+  return matrix;
+};

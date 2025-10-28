@@ -1,6 +1,8 @@
 import { useAppState } from "@/state/appState";
 import { useCallback, useEffect } from "react";
 
+import { compileExpression } from "@/wasm/hyperviz";
+
 export const FunctionPanel = () => {
   const dimension = useAppState((state) => state.dimension);
   const functionConfig = useAppState((state) => state.functionConfig);
@@ -10,37 +12,25 @@ export const FunctionPanel = () => {
 
   const validateAndCompile = useCallback(
     async (expression: string) => {
-      if (!expression.trim()) {
+      const trimmed = expression.trim();
+      if (!trimmed) {
         setFunctionValid(false, null, null);
         return;
       }
 
       try {
-        // TODO: Wire to actual ndcalc-core parser/compiler when available
-        // This would call into hyperviz.ts bindings for:
-        // - Expression parsing
-        // - Bytecode compilation
-        // - Validation of variable references (x1, x2, ..., xn)
+        const { bytecode, error } = await compileExpression(trimmed, dimension);
 
-        // Simulate validation
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
-        // Basic syntax check for demonstration
-        const validVariables = Array.from({ length: dimension }, (_, i) => `x${i + 1}`);
-        const hasValidVariables = validVariables.some((v) => expression.includes(v));
-
-        if (hasValidVariables) {
-          setFunctionValid(true, null, new Uint8Array([0x01, 0x02, 0x03])); // Stub bytecode
-          await triggerRecompute();
-        } else {
-          setFunctionValid(false, `Expression must reference at least one variable (${validVariables.join(", ")})`, null);
+        if (error) {
+          setFunctionValid(false, error, null);
+          return;
         }
+
+        setFunctionValid(true, null, bytecode);
+        await triggerRecompute();
       } catch (error) {
-        setFunctionValid(
-          false,
-          error instanceof Error ? error.message : "Parse error",
-          null
-        );
+        const message = error instanceof Error ? error.message : "Parse error";
+        setFunctionValid(false, message, null);
       }
     },
     [dimension, setFunctionValid, triggerRecompute]

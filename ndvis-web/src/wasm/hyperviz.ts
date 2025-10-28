@@ -3,11 +3,19 @@
  *
  * This module provides the interface to ndcalc-core and extended ndvis-core
  * functionality for hyperplane slicing, function evaluation, and calculus overlays.
- *
- * TODO: Wire to actual WASM module once ndcalc-core and extended ndvis-core are built
+ * The ndcalc WASM module is loaded lazily and keeps a single shared context alive
+ * across recomputations.
  */
 
-import type { HyperplaneConfig, FunctionConfig, CalculusConfig, OverlayState } from "@/state/appState";
+import type {
+  HyperplaneConfig,
+  FunctionConfig,
+  CalculusConfig,
+  OverlayState,
+  GeometryState,
+} from "@/state/appState";
+
+import createNdcalcModule, { ADMode, ErrorCode } from "@/wasm/ndcalc/index.js";
 
 export type HyperVizModule = {
   // Expression parser and bytecode VM
@@ -52,7 +60,41 @@ export type ComputeResult = {
 /**
  * Stub implementation - returns mock data until WASM module is available
  */
+type NdcalcRuntime = {
+  module: ReturnType<typeof createNdcalcModule> extends Promise<infer R> ? R : never;
+  ctx: number;
+};
+
+let ndcalcRuntimePromise: Promise<NdcalcRuntime> | null = null;
+
+const getNdcalcRuntime = async (): Promise<NdcalcRuntime> => {
+  if (!ndcalcRuntimePromise) {
+    ndcalcRuntimePromise = (async () => {
+      const module = await createNdcalcModule();
+      const ctx = module.contextCreate();
+      return { module, ctx };
+    })();
+  }
+  return ndcalcRuntimePromise;
+};
+
+const ensureAdMode = (runtime: NdcalcRuntime, mode: CalculusConfig["adMode"], epsilon = 1e-5) => {
+  switch (mode) {
+    case "forward":
+      runtime.module.setADMode(runtime.ctx, ADMode.FORWARD);
+      break;
+    case "finite-diff":
+      runtime.module.setADMode(runtime.ctx, ADMode.FINITE_DIFF);
+      runtime.module.setFDEpsilon(runtime.ctx, epsilon);
+      break;
+    default:
+      runtime.module.setADMode(runtime.ctx, ADMode.AUTO);
+      break;
+  }
+};
+
 export const computeOverlays = async (
+  geometry: GeometryState,
   hyperplane: HyperplaneConfig,
   functionConfig: FunctionConfig,
   calculus: CalculusConfig,
@@ -69,30 +111,60 @@ export const computeOverlays = async (
   };
 
   try {
-    // TODO: Replace with actual WASM calls when module is available
-
-    // Hyperplane slicing
     if (hyperplane.enabled && hyperplane.showIntersection) {
-      // Mock slice geometry - would call _hyperviz_slice_hyperplane
-      overlays.sliceGeometry = new Float32Array(12); // Stub data
+      overlays.sliceGeometry = sliceHyperplaneCpu(geometry, hyperplane);
     }
 
-    // Level sets
-    if (calculus.showLevelSets && calculus.levelSetValues.length > 0 && functionConfig.isValid) {
-      // Mock level set curves - would call _hyperviz_extract_level_sets
-      overlays.levelSetCurves = calculus.levelSetValues.map(() => new Float32Array(24));
-    }
+  const expression = functionConfig.expression.trim();
+  const needsCalculus =
+    functionConfig.isValid &&
+    expression.length > 0 &&
+    (calculus.showGradient || calculus.showTangentPlane || (calculus.showLevelSets && calculus.levelSetValues.length > 0));
 
-    // Gradient vectors
-    if (calculus.showGradient && calculus.probePoint && functionConfig.isValid) {
-      // Mock gradient - would call _hyperviz_eval_gradient
-      overlays.gradientVectors = new Float32Array(dimension * 2); // Start + end points
-    }
+    if (needsCalculus) {
+      const runtime = await getNdcalcRuntime();
+      ensureAdMode(runtime, calculus.adMode);
 
-    // Tangent plane
-    if (calculus.showTangentPlane && calculus.probePoint && functionConfig.isValid) {
-      // Mock tangent plane - would use gradient to construct plane geometry
-      overlays.tangentPatch = new Float32Array(12); // Quad vertices
+      const variables = Array.from({ length: dimension }, (_, i) => `x${i + 1}`);
+      const [compileErr, program] = runtime.module.compile(runtime.ctx, expression, variables);
+
+      if (compileErr !== ErrorCode.OK || program === 0) {
+        const message =
+          runtime.module.getLastErrorMessage(runtime.ctx) || runtime.module.errorString(compileErr);
+        return { overlays, error: message };
+      }
+
+      try {
+        if (calculus.showGradient && calculus.probePoint) {
+          const probe = ensureSizedArray(calculus.probePoint, dimension);
+          const [gradErr, gradient] = runtime.module.gradient(program, Array.from(probe));
+          if (gradErr !== ErrorCode.OK) {
+            const message = runtime.module.errorString(gradErr);
+            return { overlays, error: message };
+          }
+
+          overlays.gradientVectors = createGradientOverlay(
+            geometry,
+            probe,
+            gradient,
+            calculus.gradientScale
+          );
+        }
+
+        if (calculus.showTangentPlane && calculus.probePoint) {
+          const probe = ensureSizedArray(calculus.probePoint, dimension);
+          const [gradErr, gradient] = runtime.module.gradient(program, Array.from(probe));
+          if (gradErr === ErrorCode.OK) {
+            overlays.tangentPatch = createTangentPatch(geometry, probe, gradient);
+          }
+        }
+
+        if (calculus.showLevelSets && calculus.levelSetValues.length > 0) {
+          overlays.levelSetCurves = await computeLevelSets(runtime, program, geometry, calculus.levelSetValues);
+        }
+      } finally {
+        runtime.module.programDestroy(program);
+      }
     }
 
     return { overlays, error: null };
@@ -104,25 +176,293 @@ export const computeOverlays = async (
   }
 };
 
+const sliceHyperplaneCpu = (geometry: GeometryState, hyperplane: HyperplaneConfig): Float32Array | null => {
+  const { coefficients, offset } = hyperplane;
+  if (coefficients.length === 0) {
+    return null;
+  }
+
+  const { vertices, vertexCount, edgeCount, edges } = geometry;
+  const dimension = coefficients.length;
+
+  const vertexA = new Float32Array(dimension);
+  const vertexB = new Float32Array(dimension);
+  const intersectionND = new Float32Array(dimension);
+
+  const intersections: number[] = [];
+
+  const readVertex = (target: Float32Array, index: number) => {
+    for (let axis = 0; axis < dimension; axis += 1) {
+      target[axis] = vertices[axis * vertexCount + index];
+    }
+  };
+
+  const dot = (lhs: Float32Array, rhs: Float32Array) => {
+    let sum = 0;
+    for (let axis = 0; axis < dimension; axis += 1) {
+      sum += lhs[axis] * rhs[axis];
+    }
+    return sum;
+  };
+
+  for (let edge = 0; edge < edgeCount; edge += 1) {
+    const v0Index = edges[edge * 2];
+    const v1Index = edges[edge * 2 + 1];
+
+    readVertex(vertexA, v0Index);
+    readVertex(vertexB, v1Index);
+
+    const d0 = dot(coefficients, vertexA) - offset;
+    const d1 = dot(coefficients, vertexB) - offset;
+
+    if (d0 === 0 && d1 === 0) {
+      continue; // Edge lies on plane; skip until we handle polylines properly
+    }
+
+    if (d0 === 0 || d1 === 0 || d0 * d1 < 0) {
+      const denom = d0 - d1;
+      const t = Math.abs(denom) > 1e-6 ? d0 / denom : 0;
+
+      for (let axis = 0; axis < dimension; axis += 1) {
+        intersectionND[axis] = vertexA[axis] + t * (vertexB[axis] - vertexA[axis]);
+      }
+
+      const projected = projectPointTo3(geometry, intersectionND);
+      intersections.push(projected[0], projected[1], projected[2]);
+    }
+  }
+
+  if (intersections.length === 0) {
+    return null;
+  }
+
+  return Float32Array.from(intersections);
+};
+
+const projectPointTo3 = (geometry: GeometryState, point: Float32Array): [number, number, number] => {
+  const { dimension } = geometry;
+  const rotated = new Float32Array(dimension);
+
+  for (let row = 0; row < dimension; row += 1) {
+    let sum = 0;
+    const rowOffset = row * dimension;
+    for (let col = 0; col < dimension; col += 1) {
+      sum += geometry.rotationMatrix[rowOffset + col] * point[col];
+    }
+    rotated[row] = sum;
+  }
+
+  const result: [number, number, number] = [0, 0, 0];
+  for (let component = 0; component < 3; component += 1) {
+    let sum = 0;
+    const basisOffset = component * dimension;
+    for (let axis = 0; axis < dimension; axis += 1) {
+      sum += rotated[axis] * geometry.basis[basisOffset + axis];
+    }
+    result[component] = sum;
+  }
+
+  return result;
+};
+
+const ensureSizedArray = (input: Float32Array | null, dimension: number): Float32Array => {
+  const result = new Float32Array(dimension);
+  if (input) {
+    result.set(input.subarray(0, Math.min(dimension, input.length)));
+  }
+  return result;
+};
+
+const createGradientOverlay = (
+  geometry: GeometryState,
+  probePoint: Float32Array,
+  gradient: number[],
+  scale: number
+): Float32Array => {
+  const dimension = geometry.dimension;
+  const endPointND = new Float32Array(dimension);
+  for (let i = 0; i < dimension; i += 1) {
+    endPointND[i] = probePoint[i] + (gradient[i] ?? 0) * scale;
+  }
+
+  const start = projectPointTo3(geometry, probePoint);
+  const end = projectPointTo3(geometry, endPointND);
+
+  return Float32Array.from([...start, ...end]);
+};
+
+const createTangentPatch = (
+  geometry: GeometryState,
+  probePoint: Float32Array,
+  gradient: number[],
+  size = 0.5
+): Float32Array => {
+  const dimension = geometry.dimension;
+  const grad = ensureSizedArray(Float32Array.from(gradient), dimension);
+
+  // Normalize gradient
+  let norm = 0;
+  for (let i = 0; i < dimension; i += 1) {
+    const value = grad[i];
+    norm += value * value;
+  }
+  norm = Math.sqrt(norm);
+  if (norm === 0) {
+    return null;
+  }
+
+  for (let i = 0; i < dimension; i += 1) {
+    grad[i] /= norm;
+  }
+
+  // Build two orthonormal tangent directions via Gram-Schmidt
+  const tangentU = new Float32Array(dimension);
+  const tangentV = new Float32Array(dimension);
+
+  // Choose arbitrary vector not parallel to grad for tangentU
+  for (let i = 0; i < dimension; i += 1) {
+    tangentU[i] = i === 0 ? grad.length : 1;
+  }
+  // Project out gradient component
+  let dotGU = 0;
+  for (let i = 0; i < dimension; i += 1) {
+    dotGU += grad[i] * tangentU[i];
+  }
+  for (let i = 0; i < dimension; i += 1) {
+    tangentU[i] -= dotGU * grad[i];
+  }
+  // Normalize
+  let normU = 0;
+  for (let i = 0; i < dimension; i += 1) {
+    normU += tangentU[i] * tangentU[i];
+  }
+  normU = Math.sqrt(normU);
+  if (normU === 0) {
+    return null;
+  }
+  for (let i = 0; i < dimension; i += 1) {
+    tangentU[i] /= normU;
+  }
+
+  // tangentV = grad × tangentU (approximated via orthonormal basis construction)
+  for (let i = 0; i < dimension; i += 1) {
+    tangentV[i] = grad[i];
+  }
+  let dotUV = 0;
+  for (let i = 0; i < dimension; i += 1) {
+    dotUV += tangentU[i] * tangentV[i];
+  }
+  for (let i = 0; i < dimension; i += 1) {
+    tangentV[i] -= dotUV * tangentU[i] + grad[i];
+  }
+  let normV = 0;
+  for (let i = 0; i < dimension; i += 1) {
+    normV += tangentV[i] * tangentV[i];
+  }
+  normV = Math.sqrt(normV);
+  if (normV === 0) {
+    return null;
+  }
+  for (let i = 0; i < dimension; i += 1) {
+    tangentV[i] /= normV;
+  }
+
+  const corners = [
+    [+size, +size],
+    [-size, +size],
+    [-size, -size],
+    [+size, -size],
+  ];
+
+  const vertices3: number[] = [];
+  for (const [u, v] of corners) {
+    const ndPoint = new Float32Array(dimension);
+    for (let i = 0; i < dimension; i += 1) {
+      ndPoint[i] = probePoint[i] + u * tangentU[i] + v * tangentV[i];
+    }
+    const projected = projectPointTo3(geometry, ndPoint);
+    vertices3.push(...projected);
+  }
+
+  return Float32Array.from(vertices3);
+};
+
+const computeLevelSets = async (
+  runtime: NdcalcRuntime,
+  program: number,
+  geometry: GeometryState,
+  values: number[]
+): Promise<Float32Array[] | null> => {
+  // Placeholder: reuse hyperplane slicing logic by sampling edges and tagging sign changes
+  if (!values.length) {
+    return null;
+  }
+
+  const curves: Float32Array[] = [];
+  for (const value of values) {
+    const segments: number[] = [];
+
+    const ndPoint = new Float32Array(geometry.dimension);
+    const ndPointB = new Float32Array(geometry.dimension);
+
+    const dotVertices = (data: Float32Array, index: number, target: Float32Array) => {
+      for (let axis = 0; axis < geometry.dimension; axis += 1) {
+        target[axis] = data[axis * geometry.vertexCount + index];
+      }
+    };
+
+    for (let edge = 0; edge < geometry.edgeCount; edge += 1) {
+      const v0 = geometry.edges[edge * 2];
+      const v1 = geometry.edges[edge * 2 + 1];
+
+      dotVertices(geometry.vertices, v0, ndPoint);
+      dotVertices(geometry.vertices, v1, ndPointB);
+
+      const [, f0] = runtime.module.eval(program, Array.from(ndPoint));
+      const [, f1] = runtime.module.eval(program, Array.from(ndPointB));
+
+      if ((f0 - value) === 0 && (f1 - value) === 0) {
+        continue;
+      }
+
+      if ((f0 - value) === 0 || (f1 - value) === 0 || (f0 - value) * (f1 - value) < 0) {
+        const denom = f0 - f1;
+        const t = Math.abs(denom) > 1e-6 ? (f0 - value) / denom : 0;
+
+        const intersection = new Float32Array(geometry.dimension);
+        for (let axis = 0; axis < geometry.dimension; axis += 1) {
+          intersection[axis] = ndPoint[axis] + t * (ndPointB[axis] - ndPoint[axis]);
+        }
+
+        const projected = projectPointTo3(geometry, intersection);
+        segments.push(...projected);
+      }
+    }
+
+    if (segments.length > 0) {
+      curves.push(Float32Array.from(segments));
+    }
+  }
+
+  return curves.length ? curves : null;
+};
+
 /**
- * Parse and compile expression to bytecode
- * TODO: Wire to actual parser when ndcalc-core is available
+ * Parse and validate expression via ndcalc-core WASM.
  */
 export const compileExpression = async (
   expression: string,
   dimension: number
 ): Promise<{ bytecode: Uint8Array | null; error: string | null }> => {
-  await new Promise((resolve) => setTimeout(resolve, 30));
-
   try {
-    // Basic validation
-    if (!expression.trim()) {
+    const trimmed = expression.trim();
+    if (!trimmed) {
       return { bytecode: null, error: "Empty expression" };
     }
 
     // Check for valid variable references
     const validVariables = Array.from({ length: dimension }, (_, i) => `x${i + 1}`);
-    const hasValidVariables = validVariables.some((v) => expression.includes(v));
+    const hasValidVariables = validVariables.some((v) => trimmed.includes(v));
 
     if (!hasValidVariables) {
       return {
@@ -131,9 +471,20 @@ export const compileExpression = async (
       };
     }
 
-    // Mock bytecode - would call _hyperviz_parse_expression
-    const mockBytecode = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-    return { bytecode: mockBytecode, error: null };
+    const runtime = await getNdcalcRuntime();
+    ensureAdMode(runtime, "forward");
+
+    const variables = Array.from({ length: dimension }, (_, i) => `x${i + 1}`);
+    const [compileErr, program] = runtime.module.compile(runtime.ctx, trimmed, variables);
+
+    if (compileErr !== ErrorCode.OK || program === 0) {
+      const message =
+        runtime.module.getLastErrorMessage(runtime.ctx) || runtime.module.errorString(compileErr);
+      return { bytecode: null, error: message };
+    }
+
+    runtime.module.programDestroy(program);
+    return { bytecode: null, error: null };
   } catch (error) {
     return {
       bytecode: null,
@@ -143,8 +494,7 @@ export const compileExpression = async (
 };
 
 /**
- * Load the HyperViz WASM module
- * TODO: Replace stub with actual module loader
+ * Placeholder loader for future ndvis WASM entry points.
  */
 export const loadHyperViz = async (): Promise<HyperVizModule | null> => {
   if (import.meta.env.DEV) {

@@ -13,14 +13,15 @@ export const HyperplanePanel = () => {
     setCoefficients(Array.from(hyperplane.coefficients));
   }, [hyperplane.coefficients]);
 
-  const handleCoefficientChange = (index: number, value: number) => {
+  const handleCoefficientChange = async (index: number, value: number) => {
     const resized = new Float32Array(dimension);
     resized.set(hyperplane.coefficients.subarray(0, Math.min(dimension, hyperplane.coefficients.length)));
     resized[index] = value;
     setHyperplane({ coefficients: resized });
+    await triggerRecompute();
   };
 
-  const normalizeCoefficients = () => {
+  const normalizeCoefficients = async () => {
     const magnitude = Math.sqrt(
       Array.from(hyperplane.coefficients).reduce((sum, c) => sum + c * c, 0)
     );
@@ -29,14 +30,13 @@ export const HyperplanePanel = () => {
         Array.from(hyperplane.coefficients).map((c) => c / magnitude)
       );
       setHyperplane({ coefficients: normalized });
+      await triggerRecompute();
     }
   };
 
   const handleToggleEnabled = async () => {
     setHyperplane({ enabled: !hyperplane.enabled });
-    if (!hyperplane.enabled) {
-      await triggerRecompute();
-    }
+    await triggerRecompute();
   };
 
   const handleColorChange = (channel: number, value: number) => {
@@ -69,21 +69,21 @@ export const HyperplanePanel = () => {
           {Array.from({ length: dimension }).map((_, index) => (
             <div key={index} className="coefficient-input">
               <span>x{index + 1}</span>
-              <input
-                type="number"
-                step="0.1"
-                value={coefficients[index] ?? 0}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value) || 0;
-                  setCoefficients((prev) => {
-                    const next = [...prev];
-                    next[index] = value;
-                    return next;
-                  });
-                }}
-                onBlur={() => handleCoefficientChange(index, coefficients[index] ?? 0)}
-                disabled={!hyperplane.enabled}
-              />
+          <input
+            type="number"
+            step="0.1"
+            value={coefficients[index] ?? 0}
+            onChange={(e) => {
+              const value = parseFloat(e.target.value) || 0;
+              setCoefficients((prev) => {
+                const next = [...prev];
+                next[index] = value;
+                return next;
+              });
+            }}
+            onBlur={() => void handleCoefficientChange(index, coefficients[index] ?? 0)}
+            disabled={!hyperplane.enabled}
+          />
             </div>
           ))}
         </div>
@@ -100,7 +100,7 @@ export const HyperplanePanel = () => {
             step="0.1"
             value={hyperplane.offset}
             onChange={(e) => setHyperplane({ offset: parseFloat(e.target.value) || 0 })}
-            onBlur={() => triggerRecompute()}
+            onBlur={() => void triggerRecompute()}
             disabled={!hyperplane.enabled}
           />
         </div>
