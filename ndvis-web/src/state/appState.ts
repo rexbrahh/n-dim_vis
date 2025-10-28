@@ -65,6 +65,7 @@ export type GeometryState = {
   edges: Uint32Array; // pairs (u, v)
   rotationMatrix: Float32Array; // row-major dimension × dimension
   basis: Float32Array; // column-major 3 × dimension
+  projectedPositions: Float32Array; // vertexCount × 3
 };
 
 export type ComputeStatus = {
@@ -179,13 +180,23 @@ export const useAppState = create<AppState>((set, get) => ({
     void get().triggerRecompute();
   },
   rotationPlanes: [],
-  setRotationPlanes: (rotationPlanes) => set((state) => ({
-    rotationPlanes,
-    geometry: {
-      ...state.geometry,
-      rotationMatrix: applyRotationPlanes(state.dimension, rotationPlanes),
-    },
-  })),
+  setRotationPlanes: (rotationPlanes) => set((state) => {
+    const rotationMatrix = applyRotationPlanes(state.dimension, rotationPlanes);
+    return {
+      rotationPlanes,
+      geometry: {
+        ...state.geometry,
+        rotationMatrix,
+        projectedPositions: projectVerticesTo3(
+          state.geometry.vertices,
+          rotationMatrix,
+          state.geometry.basis,
+          state.dimension,
+          state.geometry.vertexCount
+        ),
+      },
+    };
+  }),
   basis: "standard",
   setBasis: (basis) => set({ basis }),
   pcaBasis: initialPca.basis,
@@ -347,6 +358,13 @@ const generateHypercubeGeometry = (dimension: number): GeometryState => {
 
   const rotationMatrix = createIdentityMatrix(dimension);
   const basis = createStandardBasis3(dimension);
+  const projectedPositions = projectVerticesTo3(
+    vertices,
+    rotationMatrix,
+    basis,
+    dimension,
+    vertexCount
+  );
 
   return {
     dimension,
@@ -356,6 +374,7 @@ const generateHypercubeGeometry = (dimension: number): GeometryState => {
     edges,
     rotationMatrix,
     basis,
+    projectedPositions,
   };
 };
 
@@ -400,4 +419,42 @@ const applyRotationPlanes = (dimension: number, planes: RotationPlane[]): Float3
   }
 
   return matrix;
+};
+
+const projectVerticesTo3 = (
+  vertices: Float32Array,
+  rotationMatrix: Float32Array,
+  basis: Float32Array,
+  dimension: number,
+  vertexCount: number
+): Float32Array => {
+  const out = new Float32Array(vertexCount * 3);
+  const scratch = new Float32Array(dimension);
+  const rotated = new Float32Array(dimension);
+
+  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+    for (let axis = 0; axis < dimension; axis += 1) {
+      scratch[axis] = vertices[axis * vertexCount + vertex];
+    }
+
+    for (let row = 0; row < dimension; row += 1) {
+      let sum = 0;
+      const rowOffset = row * dimension;
+      for (let col = 0; col < dimension; col += 1) {
+        sum += rotationMatrix[rowOffset + col] * scratch[col];
+      }
+      rotated[row] = sum;
+    }
+
+    for (let component = 0; component < 3; component += 1) {
+      let sum = 0;
+      const basisOffset = component * dimension;
+      for (let axis = 0; axis < dimension; axis += 1) {
+        sum += rotated[axis] * basis[basisOffset + axis];
+      }
+      out[vertex * 3 + component] = sum;
+    }
+  }
+
+  return out;
 };

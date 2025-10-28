@@ -56,6 +56,11 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
   const [positions3d, setPositions3d] = useState<Float32Array | null>(null);
   const geometryRef = useRef<BufferGeometry>(null);
 
+  // Mirror projected positions from geometry cache for immediate display
+  useEffect(() => {
+    setPositions3d(geometry.projectedPositions);
+  }, [geometry.projectedPositions]);
+
   // Initialise renderer once
   useEffect(() => {
     let mounted = true;
@@ -93,13 +98,11 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
 
     (async () => {
       try {
-        const positions = new Float32Array(geometry.vertexCount * 3);
-
         const buffers: RenderBuffers = {
           vertices: geometry.vertices,
           rotationMatrix: geometry.rotationMatrix,
           basis: geometry.basis,
-          positions3d: positions,
+          positions3d: new Float32Array(geometry.vertexCount * 3),
           edges: geometry.edges,
         };
 
