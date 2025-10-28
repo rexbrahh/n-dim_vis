@@ -130,12 +130,34 @@ export const useAppState = create<AppState>((set, get) => ({
   dimension: 4,
   setDimension: (dimension) => {
     const { basis, eigenvalues } = computePcaFallback(dimension);
-    set({
-      dimension,
-      pcaBasis: basis,
-      pcaEigenvalues: eigenvalues,
-      pcaVariance: deriveVariance(eigenvalues),
-      hyperplane: createDefaultHyperplane(dimension),
+    set((state) => {
+      const resizedCoefficients = new Float32Array(dimension);
+      resizedCoefficients.set(
+        state.hyperplane.coefficients.subarray(0, Math.min(dimension, state.hyperplane.coefficients.length))
+      );
+
+      const resizedProbePoint = state.calculus.probePoint
+        ? (() => {
+            const next = new Float32Array(dimension);
+            next.set(state.calculus.probePoint.subarray(0, Math.min(dimension, state.calculus.probePoint.length)));
+            return next;
+          })()
+        : null;
+
+      return {
+        dimension,
+        pcaBasis: basis,
+        pcaEigenvalues: eigenvalues,
+        pcaVariance: deriveVariance(eigenvalues),
+        hyperplane: {
+          ...state.hyperplane,
+          coefficients: resizedCoefficients,
+        },
+        calculus: {
+          ...state.calculus,
+          probePoint: resizedProbePoint,
+        },
+      };
     });
   },
   rotationPlanes: [],

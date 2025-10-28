@@ -14,9 +14,10 @@ export const HyperplanePanel = () => {
   }, [hyperplane.coefficients]);
 
   const handleCoefficientChange = (index: number, value: number) => {
-    const newCoefficients = new Float32Array(hyperplane.coefficients);
-    newCoefficients[index] = value;
-    setHyperplane({ coefficients: newCoefficients });
+    const resized = new Float32Array(dimension);
+    resized.set(hyperplane.coefficients.subarray(0, Math.min(dimension, hyperplane.coefficients.length)));
+    resized[index] = value;
+    setHyperplane({ coefficients: resized });
   };
 
   const normalizeCoefficients = () => {

@@ -1,7 +1,11 @@
-import { Canvas } from "@react-three/fiber";
-import { Suspense } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { OrbitControls } from "@react-three/drei";
+import { BufferGeometry, BufferAttribute } from "three";
+
 import { useAppState } from "@/state/appState";
+import { createRenderer, type GeometryConfig, type RenderBuffers, type RendererHandle } from "@/gpu/renderer";
+import { createBindings } from "@/wasm/ndvis";
 
 export const SceneViewport = () => {
   const overlays = useAppState((state) => state.overlays);
@@ -14,8 +18,7 @@ export const SceneViewport = () => {
       <Canvas camera={{ position: [4, 4, 4], fov: 60 }}>
         <color attach="background" args={["#0f172a"]} />
         <Suspense fallback={null}>
-          <DummyScene />
-          <OverlayRenderer
+          <HyperScene
             overlays={overlays}
             hyperplaneEnabled={hyperplane.enabled && hyperplane.showIntersection}
             calculusConfig={calculus}
@@ -29,20 +32,7 @@ export const SceneViewport = () => {
   );
 };
 
-const DummyScene = () => {
-  return (
-    <>
-      <ambientLight intensity={0.5} />
-      <directionalLight intensity={0.75} position={[5, 5, 5]} />
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#38bdf8" wireframe />
-      </mesh>
-    </>
-  );
-};
-
-type OverlayRendererProps = {
+type HyperSceneProps = {
   overlays: {
     sliceGeometry: Float32Array | null;
     levelSetCurves: Float32Array[] | null;
@@ -57,32 +47,147 @@ type OverlayRendererProps = {
   };
 };
 
-const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: OverlayRendererProps) => {
+const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneProps) => {
+  const { gl } = useThree();
+  const dimension = useAppState((state) => state.dimension);
+
+  const [renderer, setRenderer] = useState<RendererHandle | null>(null);
+  const [positions3d, setPositions3d] = useState<Float32Array | null>(null);
+  const geometryRef = useRef<BufferGeometry>(null);
+
+  // Initialise renderer once
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const wasm = await createBindings();
+        const handle = await createRenderer(gl.domElement, wasm);
+        if (!mounted) {
+          handle.dispose();
+          return;
+        }
+        setRenderer(handle);
+      } catch (error) {
+        console.error("Failed to initialise renderer", error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      setRenderer((prev) => {
+        prev?.dispose();
+        return null;
+      });
+    };
+  }, [gl]);
+
+  // Project demo geometry whenever dimension or renderer changes
+  useEffect(() => {
+    if (!renderer) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const safeDimension = Math.max(1, Math.min(dimension, 12));
+        const vertexCount = Math.min(1 << safeDimension, 4096);
+
+        const vertices = new Float32Array(safeDimension * vertexCount);
+        for (let i = 0; i < vertexCount; i += 1) {
+          for (let axis = 0; axis < safeDimension; axis += 1) {
+            vertices[axis * vertexCount + i] = ((i >> axis) & 1) * 2 - 1;
+          }
+        }
+
+        const rotationMatrix = new Float32Array(safeDimension * safeDimension);
+        for (let axis = 0; axis < safeDimension; axis += 1) {
+          rotationMatrix[axis * safeDimension + axis] = 1;
+        }
+
+        const basis = new Float32Array(3 * safeDimension);
+        for (let component = 0; component < 3; component += 1) {
+          if (component < safeDimension) {
+            basis[component * safeDimension + component] = 1;
+          }
+        }
+
+        const positions = new Float32Array(vertexCount * 3);
+
+        const buffers: RenderBuffers = {
+          vertices,
+          rotationMatrix,
+          basis,
+          positions3d: positions,
+        };
+
+        const config: GeometryConfig = {
+          dimension: safeDimension,
+          vertexCount,
+        };
+
+        const projected = await renderer.projectTo3D(buffers, config);
+        if (!cancelled) {
+          setPositions3d(projected);
+        }
+      } catch (error) {
+        console.error("Failed to project geometry", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [renderer, dimension]);
+
+  useEffect(() => {
+    if (positions3d && geometryRef.current) {
+      geometryRef.current.setAttribute("position", new BufferAttribute(positions3d, 3));
+      geometryRef.current.computeBoundingSphere();
+    }
+  }, [positions3d]);
+
+  return (
+    <>
+      <ambientLight intensity={0.5} />
+      <directionalLight intensity={0.75} position={[5, 5, 5]} />
+
+      {positions3d && (
+        <points>
+          <bufferGeometry ref={geometryRef} />
+          <pointsMaterial color="#38bdf8" size={0.15} />
+        </points>
+      )}
+
+      <OverlayRenderer
+        overlays={overlays}
+        hyperplaneEnabled={hyperplaneEnabled}
+        calculusConfig={calculusConfig}
+      />
+    </>
+  );
+};
+
+const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneProps) => {
   return (
     <group name="overlays">
-      {/* Hyperplane intersection slice */}
       {hyperplaneEnabled && overlays.sliceGeometry && (
         <line name="hyperplane-slice">
           <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[overlays.sliceGeometry, 3]}
-            />
+            <bufferAttribute attach="attributes-position" args={[overlays.sliceGeometry, 3]} />
           </bufferGeometry>
           <lineBasicMaterial color="#ff8800" />
         </line>
       )}
 
-      {/* Level set curves */}
       {calculusConfig.showLevelSets && overlays.levelSetCurves && (
         <group name="level-sets">
           {overlays.levelSetCurves.map((curve, index) => (
             <line key={index}>
               <bufferGeometry>
-                <bufferAttribute
-                  attach="attributes-position"
-                  args={[curve, 3]}
-                />
+                <bufferAttribute attach="attributes-position" args={[curve, 3]} />
               </bufferGeometry>
               <lineBasicMaterial color="#10b981" />
             </line>
@@ -90,27 +195,19 @@ const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: Overla
         </group>
       )}
 
-      {/* Gradient vectors */}
       {calculusConfig.showGradient && overlays.gradientVectors && (
         <line name="gradient-vectors">
           <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[overlays.gradientVectors, 3]}
-            />
+            <bufferAttribute attach="attributes-position" args={[overlays.gradientVectors, 3]} />
           </bufferGeometry>
           <lineBasicMaterial color="#f59e0b" />
         </line>
       )}
 
-      {/* Tangent plane patch */}
       {calculusConfig.showTangentPlane && overlays.tangentPatch && (
         <mesh name="tangent-plane">
           <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              args={[overlays.tangentPatch, 3]}
-            />
+            <bufferAttribute attach="attributes-position" args={[overlays.tangentPatch, 3]} />
           </bufferGeometry>
           <meshBasicMaterial color="#8b5cf6" opacity={0.4} transparent side={2} />
         </mesh>
