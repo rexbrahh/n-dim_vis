@@ -1,0 +1,14 @@
+# Node/Web build outputs
+ndvis-web/node_modules/
+ndvis-web/dist/
+ndvis-web/.turbo/
+
+# CMake/Emscripten build directories
+ndvis-core/build/
+ndvis-core/build-*/
+ndvis-render-headless/build/
+ndcalc-core/wasm/build-wasm/
+ndcalc-core/wasm/dist/
+
+# Misc
+.DS_Store
