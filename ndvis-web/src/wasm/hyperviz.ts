@@ -65,6 +65,7 @@ type NdcalcRuntime = {
   ctx: number;
 };
 
+const ndcalcProgramCache = new Map<string, number>();
 let ndcalcRuntimePromise: Promise<NdcalcRuntime> | null = null;
 
 const getNdcalcRuntime = async (): Promise<NdcalcRuntime> => {
@@ -126,12 +127,19 @@ export const computeOverlays = async (
       ensureAdMode(runtime, calculus.adMode);
 
       const variables = Array.from({ length: dimension }, (_, i) => `x${i + 1}`);
-      const [compileErr, program] = runtime.module.compile(runtime.ctx, expression, variables);
+      const cacheKey = `${expression}::${dimension}`;
+      let program = getCachedProgram(runtime, cacheKey);
 
-      if (compileErr !== ErrorCode.OK || program === 0) {
-        const message =
-          runtime.module.getLastErrorMessage(runtime.ctx) || runtime.module.errorString(compileErr);
-        return { overlays, error: message };
+      if (!program) {
+        const [compileErr, compiledProgram] = runtime.module.compile(runtime.ctx, expression, variables);
+
+        if (compileErr !== ErrorCode.OK || compiledProgram === 0) {
+          const message =
+            runtime.module.getLastErrorMessage(runtime.ctx) || runtime.module.errorString(compileErr);
+          return { overlays, error: message };
+        }
+        storeProgramInCache(cacheKey, compiledProgram);
+        program = compiledProgram;
       }
 
       try {
@@ -163,7 +171,7 @@ export const computeOverlays = async (
           overlays.levelSetCurves = await computeLevelSets(runtime, program, geometry, calculus.levelSetValues);
         }
       } finally {
-        runtime.module.programDestroy(program);
+        releaseProgram(runtime, cacheKey, program);
       }
     }
 
@@ -475,15 +483,20 @@ export const compileExpression = async (
     ensureAdMode(runtime, "forward");
 
     const variables = Array.from({ length: dimension }, (_, i) => `x${i + 1}`);
-    const [compileErr, program] = runtime.module.compile(runtime.ctx, trimmed, variables);
+    const cacheKey = `${trimmed}::${dimension}`;
+    let program = getCachedProgram(runtime, cacheKey);
+    if (!program) {
+      const [compileErr, compiledProgram] = runtime.module.compile(runtime.ctx, trimmed, variables);
 
-    if (compileErr !== ErrorCode.OK || program === 0) {
-      const message =
-        runtime.module.getLastErrorMessage(runtime.ctx) || runtime.module.errorString(compileErr);
-      return { bytecode: null, error: message };
+      if (compileErr !== ErrorCode.OK || compiledProgram === 0) {
+        const message =
+          runtime.module.getLastErrorMessage(runtime.ctx) || runtime.module.errorString(compileErr);
+        return { bytecode: null, error: message };
+      }
+      storeProgramInCache(cacheKey, compiledProgram);
+      program = compiledProgram;
     }
 
-    runtime.module.programDestroy(program);
     return { bytecode: null, error: null };
   } catch (error) {
     return {
@@ -502,4 +515,21 @@ export const loadHyperViz = async (): Promise<HyperVizModule | null> => {
   }
   // Return null to indicate module not loaded - calling code should use stub functions
   return null;
+};
+const getCachedProgram = (
+  runtime: NdcalcRuntime,
+  key: string
+): number | undefined => ndcalcProgramCache.get(key);
+
+const storeProgramInCache = (
+  key: string,
+  program: number
+) => {
+  ndcalcProgramCache.set(key, program);
+};
+
+const releaseProgram = (runtime: NdcalcRuntime, key: string, program: number) => {
+  if (!ndcalcProgramCache.has(key)) {
+    runtime.module.programDestroy(program);
+  }
 };
