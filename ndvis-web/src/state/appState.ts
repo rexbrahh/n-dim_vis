@@ -330,7 +330,7 @@ export const useAppState = create<AppState>((set, get) => ({
 
 // --- helpers ----------------------------------------------------------------
 
-const generateHypercubeGeometry = (dimension: number): GeometryState => {
+export function generateHypercubeGeometry(dimension: number): GeometryState {
   const vertexCount = Math.max(1, 1 << Math.min(dimension, 12));
   const edgeCount = dimension * (vertexCount >> 1);
 
@@ -376,17 +376,17 @@ const generateHypercubeGeometry = (dimension: number): GeometryState => {
     basis,
     projectedPositions,
   };
-};
+}
 
-const createIdentityMatrix = (dimension: number): Float32Array => {
+function createIdentityMatrix(dimension: number): Float32Array {
   const matrix = new Float32Array(dimension * dimension);
   for (let i = 0; i < dimension; i += 1) {
     matrix[i * dimension + i] = 1;
   }
   return matrix;
-};
+}
 
-const createStandardBasis3 = (dimension: number): Float32Array => {
+function createStandardBasis3(dimension: number): Float32Array {
   const basis = new Float32Array(3 * dimension);
   for (let component = 0; component < 3; component += 1) {
     if (component < dimension) {
@@ -394,9 +394,9 @@ const createStandardBasis3 = (dimension: number): Float32Array => {
     }
   }
   return basis;
-};
+}
 
-const applyRotationPlanes = (dimension: number, planes: RotationPlane[]): Float32Array => {
+function applyRotationPlanes(dimension: number, planes: RotationPlane[]): Float32Array {
   const matrix = createIdentityMatrix(dimension);
 
   for (const plane of planes) {
@@ -419,15 +419,15 @@ const applyRotationPlanes = (dimension: number, planes: RotationPlane[]): Float3
   }
 
   return matrix;
-};
+}
 
-const projectVerticesTo3 = (
+function projectVerticesTo3(
   vertices: Float32Array,
   rotationMatrix: Float32Array,
   basis: Float32Array,
   dimension: number,
   vertexCount: number
-): Float32Array => {
+): Float32Array {
   const out = new Float32Array(vertexCount * 3);
   const scratch = new Float32Array(dimension);
   const rotated = new Float32Array(dimension);
@@ -457,4 +457,4 @@ const projectVerticesTo3 = (
   }
 
   return out;
-};
+}

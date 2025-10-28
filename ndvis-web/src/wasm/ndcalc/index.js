@@ -4,6 +4,22 @@
 
 import createNdcalcModuleRaw from './ndcalc_wasm.js';
 
+export const ErrorCode = Object.freeze({
+  OK: 0,
+  PARSE: 1,
+  INVALID_EXPR: 2,
+  EVAL: 3,
+  OUT_OF_MEMORY: 4,
+  INVALID_DIMENSION: 5,
+  NULL_POINTER: 6,
+});
+
+export const ADMode = Object.freeze({
+  AUTO: 0,
+  FORWARD: 1,
+  FINITE_DIFF: 2,
+});
+
 class NdcalcWrapper {
   constructor(module) {
     this.module = module;
@@ -205,5 +221,3 @@ export default async function createNdcalcModule() {
   const module = await createNdcalcModuleRaw();
   return new NdcalcWrapper(module);
 }
-
-export { ErrorCode, ADMode } from './ndcalc';

@@ -79,6 +79,15 @@ const getNdcalcRuntime = async (): Promise<NdcalcRuntime> => {
   return ndcalcRuntimePromise;
 };
 
+export const __setNdcalcRuntimeForTests = (runtime: NdcalcRuntime | null) => {
+  if (runtime) {
+    ndcalcRuntimePromise = Promise.resolve(runtime);
+  } else {
+    ndcalcRuntimePromise = null;
+  }
+  ndcalcProgramCache.clear();
+};
+
 const ensureAdMode = (runtime: NdcalcRuntime, mode: CalculusConfig["adMode"], epsilon = 1e-5) => {
   switch (mode) {
     case "forward":
