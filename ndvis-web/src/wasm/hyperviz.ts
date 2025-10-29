@@ -247,22 +247,20 @@ const computeOverlaysWithWasm = async (
 ): Promise<WasmOverlayAttempt> => {
   const bindings = await getNdvisBindings();
   if (!bindings) {
-    return null;
+    return { success: false, error: "ndvis WASM bindings unavailable; using CPU fallback." };
   }
 
   const module = bindings.module;
   const computeFn = module._ndvis_compute_overlays;
   if (typeof computeFn !== "function" || !module._malloc || !module._free) {
-    return null;
+    return { success: false, error: "ndvis WASM module missing exports; using CPU fallback." };
   }
 
   if (!module.HEAPF32 || !module.HEAPU8 || !module.HEAPU32) {
-    console.warn("ndvis wasm heaps unavailable; falling back to CPU", {
-      hasF32: Boolean(module.HEAPF32),
-      hasU8: Boolean(module.HEAPU8),
-      hasU32: Boolean(module.HEAPU32),
-    });
-    return null;
+    return {
+      success: false,
+      error: "ndvis WASM heap views unavailable; using CPU fallback.",
+    };
   }
 
   const expression = functionConfig.expression.trim();
@@ -446,7 +444,7 @@ const computeOverlaysWithWasm = async (
   } catch (error) {
     const message = error instanceof Error ? error.message : "Overlay computation failed";
     if (message.includes("not implemented")) {
-      return null;
+      return { success: false, error: "ndvis WASM not implemented; using CPU fallback." };
     }
     return { success: false, error: message };
   } finally {
@@ -459,11 +457,15 @@ const computeOverlaysCpu = async (
   hyperplane: HyperplaneConfig,
   functionConfig: FunctionConfig,
   calculus: CalculusConfig,
-  dimension: number
+  dimension: number,
+  fallbackMessage?: string | null
 ): Promise<ComputeResult> => {
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   const overlays = createEmptyOverlays();
+  if (fallbackMessage) {
+    console.warn(fallbackMessage);
+  }
 
   try {
     if (hyperplane.enabled && hyperplane.showIntersection) {
@@ -546,14 +548,12 @@ export const computeOverlays = async (
   dimension: number
 ): Promise<ComputeResult> => {
   const wasmAttempt = await computeOverlaysWithWasm(geometry, hyperplane, functionConfig, calculus, dimension);
-  if (wasmAttempt) {
-    if (wasmAttempt.success) {
-      return { overlays: wasmAttempt.overlays, error: null };
-    }
-    return { overlays: createEmptyOverlays(), error: wasmAttempt.error };
+  if (wasmAttempt && wasmAttempt.success) {
+    return { overlays: wasmAttempt.overlays, error: null };
   }
 
-  return computeOverlaysCpu(geometry, hyperplane, functionConfig, calculus, dimension);
+  const fallbackMessage = wasmAttempt ? wasmAttempt.error : "ndvis WASM unavailable; using CPU fallback.";
+  return computeOverlaysCpu(geometry, hyperplane, functionConfig, calculus, dimension, fallbackMessage);
 };
 
 const sliceHyperplaneCpu = (geometry: GeometryState, hyperplane: HyperplaneConfig): Float32Array | null => {

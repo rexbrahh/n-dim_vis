@@ -150,25 +150,13 @@ export const loadNdvis: WasmLoader = async () => {
         return createStubModule();
       }
       try {
-        const candidates = import.meta.glob("./ndvis-wasm.js");
-        const loadFactory = candidates["./ndvis-wasm.js"];
-        if (!loadFactory) {
-          if (import.meta.env.DEV) {
-            console.warn("ndvis wasm bundle not found; using stub implementation");
-          }
-          return createStubModule();
-        }
-
-        const factoryModule = await loadFactory();
+        const wasmBase = "/wasm/";
+        const cacheBuster = import.meta.env.DEV ? `?dev=${Date.now()}` : "";
+        const factoryModule = await import(/* @vite-ignore */ `${wasmBase}ndvis-wasm.js${cacheBuster}`);
         const createModule = (factoryModule as any).default ?? factoryModule;
         const moduleOptions: Record<string, unknown> = {
-          locateFile: (file: string, prefix?: string) => {
-            if (file.endsWith(".js") || file.endsWith(".wasm")) {
-              return new URL(file, import.meta.url).href;
-            }
-            return (prefix ?? "") + file;
-          },
-          mainScriptUrlOrBlob: new URL("./ndvis-wasm.js", import.meta.url).href,
+          locateFile: (file: string) => `${wasmBase}${file}`,
+          mainScriptUrlOrBlob: `${wasmBase}ndvis-wasm.js${cacheBuster}`,
           onAbort: (what: unknown) => {
             console.error("ndvis wasm aborted", what);
           },
