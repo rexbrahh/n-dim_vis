@@ -19,6 +19,7 @@ import createNdcalcModule, { ADMode, ErrorCode } from "@/wasm/ndcalc/index.js";
 import { createBindings as createNdvisBindings, type NdvisBindings } from "@/wasm/ndvis";
 
 const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder("utf-8");
 const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
 const bytesPerUint32 = Uint32Array.BYTES_PER_ELEMENT;
 const ensureNdcalcUtf8Helpers = (
@@ -46,6 +47,20 @@ const ensureNdcalcUtf8Helpers = (
       target.stringToUTF8 = () => {
         /* stub runtime; nothing to copy */
       };
+    }
+  }
+
+  if (!target.UTF8ToString) {
+    if (heap) {
+      target.UTF8ToString = (ptr: number) => {
+        let end = ptr;
+        while (heap[end] !== 0) {
+          end += 1;
+        }
+        return textDecoder.decode(heap.subarray(ptr, end));
+      };
+    } else {
+      target.UTF8ToString = () => "";
     }
   }
 };
