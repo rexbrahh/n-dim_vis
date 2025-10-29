@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <cassert>
 #include <cstddef>
+#include <string>
 
 #include "ndvis/api.h"
 #include "ndvis/geometry.hpp"
@@ -10,6 +11,7 @@
 #include "ndvis/types.hpp"
 #include "ndvis/pca.hpp"
 #include "ndvis/hyperplane.hpp"
+#include "ndvis/overlays.hpp"
 
 namespace {
 constexpr float kEpsilon = 1e-5f;
@@ -393,6 +395,100 @@ int main() {
     for (std::size_t i = 0; i < result.intersection_count; ++i) {
       const float w = intersection_points[3 * result.intersection_count + i];
       assert(approx_equal(w, 0.0f));
+    }
+  }
+
+  {
+    const std::size_t dimension = 3;
+    const std::size_t vertex_count = 8;
+    const std::size_t edge_pairs = 12;
+
+    float vertices[dimension * vertex_count] = {
+        -1, 1, -1, 1, -1, 1, -1, 1,
+        -1, -1, 1, 1, -1, -1, 1, 1,
+        -1, -1, -1, -1, 1, 1, 1, 1
+    };
+    ndvis_index_t edges[edge_pairs * 2] = {
+        0,1, 0,2, 0,4, 1,3, 1,5, 2,3, 2,6, 3,7, 4,5, 4,6, 5,7, 6,7
+    };
+
+    float rotation[dimension * dimension] = {
+        1,0,0,
+        0,1,0,
+        0,0,1
+    };
+    float basis[dimension * 3] = {
+        1,0,0,
+        0,1,0,
+        0,0,1
+    };
+
+    NdvisOverlayGeometry geometry{};
+    geometry.vertices = vertices;
+    geometry.vertex_count = vertex_count;
+    geometry.dimension = dimension;
+    geometry.edges = edges;
+    geometry.edge_count = edge_pairs;
+    geometry.rotation_matrix = rotation;
+    geometry.basis3 = basis;
+
+    float coeff[3] = {1.0f, 0.0f, 0.0f};
+    NdvisOverlayHyperplane hyperplane{};
+    hyperplane.coefficients = coeff;
+    hyperplane.dimension = dimension;
+    hyperplane.offset = 0.0f;
+    hyperplane.enabled = 1;
+
+    std::string expression = "x1";
+    float probe_point[3] = {0.25f, 0.0f, 0.0f};
+    float level_set_values[1] = {0.0f};
+
+    NdvisOverlayCalculus calculus{};
+    calculus.expression_utf8 = expression.c_str();
+    calculus.expression_length = expression.size();
+    calculus.probe_point = probe_point;
+    calculus.level_set_values = level_set_values;
+    calculus.level_set_count = 1;
+    calculus.show_gradient = 1;
+    calculus.show_tangent_plane = 1;
+    calculus.show_level_sets = 1;
+    calculus.gradient_scale = 0.5f;
+
+    float projected[vertex_count * 3] = {0.0f};
+    float slice_positions[edge_pairs * 3] = {0.0f};
+    std::size_t slice_count = 0;
+    float gradient_positions[6] = {0.0f};
+    float tangent_patch[12] = {0.0f};
+    float level_curve_storage[edge_pairs * 3] = {0.0f};
+    float* level_curves[1] = {level_curve_storage};
+    std::size_t level_sizes[1] = {edge_pairs * 3};
+    std::size_t level_set_count = 0;
+
+    NdvisOverlayBuffers buffers{};
+    buffers.projected_vertices = projected;
+    buffers.projected_stride = vertex_count;
+    buffers.slice_positions = slice_positions;
+    buffers.slice_capacity = edge_pairs;
+    buffers.slice_count = &slice_count;
+    buffers.gradient_positions = gradient_positions;
+    buffers.tangent_patch_positions = tangent_patch;
+    buffers.level_set_curves = level_curves;
+    buffers.level_set_sizes = level_sizes;
+    buffers.level_set_capacity = 1;
+    buffers.level_set_count = &level_set_count;
+
+    const int overlay_result = ndvis_compute_overlays(&geometry, &hyperplane, &calculus, &buffers);
+    assert(overlay_result == NDVIS_OVERLAY_SUCCESS);
+    assert(slice_count == 4);
+    assert(level_set_count == 1);
+    assert(level_sizes[0] == 12);
+
+    assert(approx_equal(gradient_positions[0], 0.25f));
+    assert(approx_equal(gradient_positions[3], 0.25f + 0.5f));
+    assert(tangent_patch[0] != 0.0f || tangent_patch[1] != 0.0f || tangent_patch[2] != 0.0f);
+
+    for (std::size_t i = 0; i < level_sizes[0]; i += 3) {
+      assert(approx_equal(level_curve_storage[i], 0.0f));
     }
   }
 
