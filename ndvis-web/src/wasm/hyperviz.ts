@@ -25,6 +25,7 @@ const ensureNdcalcUtf8Helpers = (module: StubModule | (ReturnType<typeof createN
   const mutableModule = module as StubModule & {
     stringToUTF8?: (value: string, ptr: number, maxBytesToWrite: number) => void;
     lengthBytesUTF8?: (value: string) => number;
+    HEAPU8?: Uint8Array;
   };
 
   if (!mutableModule.lengthBytesUTF8) {
@@ -32,15 +33,22 @@ const ensureNdcalcUtf8Helpers = (module: StubModule | (ReturnType<typeof createN
   }
 
   if (!mutableModule.stringToUTF8) {
-    mutableModule.stringToUTF8 = (value, ptr, maxBytesToWrite) => {
-      if (maxBytesToWrite <= 0) {
-        return;
-      }
-      const encoded = textEncoder.encode(value);
-      const bytesToWrite = Math.min(encoded.length, Math.max(0, maxBytesToWrite - 1));
-      module.HEAPU8.subarray(ptr, ptr + bytesToWrite).set(encoded.subarray(0, bytesToWrite));
-      module.HEAPU8[ptr + bytesToWrite] = 0;
-    };
+    const heap = mutableModule.HEAPU8;
+    if (heap) {
+      mutableModule.stringToUTF8 = (value, ptr, maxBytesToWrite) => {
+        if (maxBytesToWrite <= 0) {
+          return;
+        }
+        const encoded = textEncoder.encode(value);
+        const bytesToWrite = Math.min(encoded.length, Math.max(0, maxBytesToWrite - 1));
+        heap.subarray(ptr, ptr + bytesToWrite).set(encoded.subarray(0, bytesToWrite));
+        heap[ptr + bytesToWrite] = 0;
+      };
+    } else {
+      mutableModule.stringToUTF8 = () => {
+        /* no-op for stub runtimes */
+      };
+    }
   }
 };
 
