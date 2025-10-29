@@ -16,7 +16,7 @@ export const SceneViewport = () => {
   return (
     <section className="scene-viewport">
       <Canvas camera={{ position: [4, 4, 4], fov: 60 }}>
-        <color attach="background" args={["#0f172a"]} />
+        <color attach="background" args={["#111111"]} />
         <Suspense fallback={null}>
           <HyperScene
             overlays={overlays}
@@ -141,7 +141,7 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
       {positions3d && (
         <points>
           <bufferGeometry ref={geometryRef} />
-          <pointsMaterial color="#38bdf8" size={0.15} />
+          <pointsMaterial color="#f4f4f5" size={0.15} />
         </points>
       )}
 
@@ -162,7 +162,7 @@ const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperS
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[overlays.sliceGeometry, 3]} />
           </bufferGeometry>
-          <lineBasicMaterial color="#ff8800" />
+          <lineBasicMaterial color="#d4d4d8" />
         </line>
       )}
 
@@ -173,7 +173,7 @@ const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperS
               <bufferGeometry>
                 <bufferAttribute attach="attributes-position" args={[curve, 3]} />
               </bufferGeometry>
-              <lineBasicMaterial color="#10b981" />
+              <lineBasicMaterial color="#e5e5e5" />
             </line>
           ))}
         </group>
@@ -184,7 +184,7 @@ const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperS
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[overlays.gradientVectors, 3]} />
           </bufferGeometry>
-          <lineBasicMaterial color="#f59e0b" />
+          <lineBasicMaterial color="#d4d4d8" />
         </line>
       )}
 
@@ -193,7 +193,7 @@ const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperS
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[overlays.tangentPatch, 3]} />
           </bufferGeometry>
-          <meshBasicMaterial color="#8b5cf6" opacity={0.4} transparent side={2} />
+          <meshBasicMaterial color="#d4d4d8" opacity={0.4} transparent side={2} />
         </mesh>
       )}
     </group>

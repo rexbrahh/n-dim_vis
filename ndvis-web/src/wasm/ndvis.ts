@@ -1,16 +1,25 @@
 export type NdvisModule = {
   readonly HEAPF32: Float32Array;
+  readonly HEAPU8: Uint8Array;
   readonly HEAPU32: Uint32Array;
-  _ndvis_generate_hypercube: (dimension: number, vertexPtr: number, edgePtr: number) => void;
-  _ndvis_compute_pca_with_values: (
+  readonly HEAP32: Int32Array;
+  _ndvis_generate_hypercube?: (dimension: number, vertexPtr: number, edgePtr: number) => void;
+  _ndvis_compute_pca_with_values?: (
     vertexPtr: number,
     vertexCount: number,
     dimension: number,
     basisPtr: number,
     eigenvaluesPtr: number,
   ) => void;
-  _malloc: (bytes: number) => number;
-  _free: (ptr: number) => void;
+  _ndvis_compute_overlays?: (
+    geometryPtr: number,
+    hyperplanePtr: number,
+    calculusPtr: number,
+    buffersPtr: number,
+  ) => number;
+  _malloc?: (bytes: number) => number;
+  _free?: (ptr: number) => void;
+  __ndvisStub?: boolean;
 };
 
 export type WasmLoader = () => Promise<NdvisModule>;
@@ -57,7 +66,6 @@ export const computePcaFallback = (dimension: number): PcaWorkspace => {
 };
 
 export const createBindings = async (): Promise<NdvisBindings> => {
-// When wiring the real WASM module, ensure _ndvis_compute_pca_with_values, _malloc, and _free are exported.
   const module = await loadNdvis();
   const computePca = (vertices: Float32Array, dimension: number): PcaWorkspace => {
     if (!module._ndvis_compute_pca_with_values || !module._malloc || !module._free) {
@@ -91,28 +99,65 @@ export const createBindings = async (): Promise<NdvisBindings> => {
   return { module, computePca };
 };
 
-// TODO: Replace stubs with real WASM bindings once ndvis wasm module is emitted; ensure basis/eigenvalue buffers are malloc
-// and copied before calling `_ndvis_compute_pca_with_values`.
+const createStubModule = (): NdvisModule => ({
+  HEAPF32: new Float32Array(),
+  HEAPU8: new Uint8Array(),
+  HEAPU32: new Uint32Array(),
+  HEAP32: new Int32Array(),
+  _ndvis_generate_hypercube() {
+    /* no-op stub */
+  },
+  __ndvisStub: true,
+});
+
+let modulePromise: Promise<NdvisModule> | null = null;
 
 export const loadNdvis: WasmLoader = async () => {
-  if (import.meta.env.DEV) {
-    console.warn("WASM module not yet wired; returning stub implementation");
+  if (!modulePromise) {
+    modulePromise = (async () => {
+      const isolated = typeof crossOriginIsolated === "boolean" ? crossOriginIsolated : true;
+      if (!isolated) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            "SharedArrayBuffer requires cross-origin isolation (COOP/COEP). Falling back to stub ndvis module."
+          );
+        }
+        return createStubModule();
+      }
+      try {
+        const candidates = import.meta.glob("./ndvis-wasm.js");
+        const loadFactory = candidates["./ndvis-wasm.js"];
+        if (!loadFactory) {
+          if (import.meta.env.DEV) {
+            console.warn("ndvis wasm bundle not found; using stub implementation");
+          }
+          return createStubModule();
+        }
+
+        const factoryModule = await loadFactory();
+        const createModule = (factoryModule as any).default ?? factoryModule;
+        const moduleOptions: Record<string, unknown> = {
+          locateFile: (file: string, prefix?: string) => {
+            if (file.endsWith(".js") || file.endsWith(".wasm")) {
+              return new URL(file, import.meta.url).href;
+            }
+            return (prefix ?? "") + file;
+          },
+          mainScriptUrlOrBlob: new URL("./ndvis-wasm.js", import.meta.url).href,
+          onAbort: (what: unknown) => {
+            console.error("ndvis wasm aborted", what);
+          },
+        };
+        const instance = await createModule(moduleOptions);
+        return instance as NdvisModule;
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn("Failed to load ndvis wasm module; falling back to stub", error);
+        }
+        return createStubModule();
+      }
+    })();
   }
 
-  return {
-    HEAPF32: new Float32Array(),
-    HEAPU32: new Uint32Array(),
-    _ndvis_generate_hypercube() {
-      /* no-op stub */
-    },
-    _ndvis_compute_pca_with_values() {
-      throw new Error("ndvis wasm PCA not implemented yet");
-    },
-    _malloc() {
-      throw new Error("ndvis wasm malloc not implemented yet");
-    },
-    _free() {
-      /* no-op stub */
-    },
-  } satisfies NdvisModule;
+  return modulePromise;
 };

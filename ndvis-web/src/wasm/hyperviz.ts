@@ -16,6 +16,11 @@ import type {
 } from "@/state/appState";
 
 import createNdcalcModule, { ADMode, ErrorCode } from "@/wasm/ndcalc/index.js";
+import { createBindings as createNdvisBindings, type NdvisBindings } from "@/wasm/ndvis";
+
+const textEncoder = new TextEncoder();
+const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
+const bytesPerUint32 = Uint32Array.BYTES_PER_ELEMENT;
 
 export type HyperVizModule = {
   // Expression parser and bytecode VM
@@ -103,33 +108,319 @@ const ensureAdMode = (runtime: NdcalcRuntime, mode: CalculusConfig["adMode"], ep
   }
 };
 
-export const computeOverlays = async (
+const overlayErrorMessages: Record<number, string> = {
+  1: "Invalid overlay inputs",
+  2: "Overlay output buffer missing",
+  3: "Expression evaluation failed",
+  4: "Gradient computation failed",
+};
+
+let ndvisBindingsPromise: Promise<NdvisBindings> | null = null;
+
+const getNdvisBindings = async (): Promise<NdvisBindings | null> => {
+  try {
+    if (!ndvisBindingsPromise) {
+      ndvisBindingsPromise = createNdvisBindings();
+    }
+    const bindings = await ndvisBindingsPromise;
+    if (!bindings.module._ndvis_compute_overlays || !bindings.module._malloc || !bindings.module._free) {
+      return null;
+    }
+    return bindings;
+  } catch {
+    return null;
+  }
+};
+
+class WasmArena {
+  private allocations: number[] = [];
+
+  constructor(private readonly module: NdvisBindings["module"]) {}
+
+  alloc(byteLength: number): number {
+    if (byteLength <= 0) {
+      return 0;
+    }
+    const ptr = this.module._malloc!(byteLength);
+    if (!ptr) {
+      throw new Error("ndvis wasm malloc failed");
+    }
+    this.allocations.push(ptr);
+    return ptr;
+  }
+
+  copyFloat32(array: Float32Array): number {
+    if (array.length === 0) {
+      return 0;
+    }
+    const ptr = this.alloc(array.length * bytesPerFloat);
+    this.module.HEAPF32.set(array, ptr / bytesPerFloat);
+    return ptr;
+  }
+
+  copyUint32(array: Uint32Array): number {
+    if (array.length === 0) {
+      return 0;
+    }
+    const ptr = this.alloc(array.length * bytesPerUint32);
+    this.module.HEAPU32.set(array, ptr / bytesPerUint32);
+    return ptr;
+  }
+
+  copyUint8(array: Uint8Array): number {
+    if (array.length === 0) {
+      return 0;
+    }
+    const ptr = this.alloc(array.length);
+    this.module.HEAPU8.set(array, ptr);
+    return ptr;
+  }
+
+  freeAll() {
+    for (let i = this.allocations.length - 1; i >= 0; i -= 1) {
+      this.module._free!(this.allocations[i]);
+    }
+    this.allocations = [];
+  }
+}
+
+type WasmOverlayAttempt = { success: true; overlays: OverlayState } | { success: false; error: string } | null;
+
+const createEmptyOverlays = (): OverlayState => ({
+  sliceGeometry: null,
+  levelSetCurves: null,
+  gradientVectors: null,
+  tangentPatch: null,
+});
+
+const computeOverlaysWithWasm = async (
+  geometry: GeometryState,
+  hyperplane: HyperplaneConfig,
+  functionConfig: FunctionConfig,
+  calculus: CalculusConfig,
+  dimension: number
+): Promise<WasmOverlayAttempt> => {
+  const bindings = await getNdvisBindings();
+  if (!bindings) {
+    return null;
+  }
+
+  const module = bindings.module;
+  const computeFn = module._ndvis_compute_overlays;
+  if (typeof computeFn !== "function" || !module._malloc || !module._free) {
+    return null;
+  }
+
+  const expression = functionConfig.expression.trim();
+  const calculusEnabled =
+    functionConfig.isValid &&
+    expression.length > 0 &&
+    (calculus.showGradient || calculus.showTangentPlane || (calculus.showLevelSets && calculus.levelSetValues.length > 0));
+
+  const wantsSlice = hyperplane.enabled && hyperplane.showIntersection;
+  const wantsGradient = calculusEnabled && calculus.showGradient && Boolean(calculus.probePoint);
+  const wantsTangent = calculusEnabled && calculus.showTangentPlane && Boolean(calculus.probePoint);
+  const wantsLevelSets = calculusEnabled && calculus.showLevelSets && calculus.levelSetValues.length > 0;
+  const needsCalculus = wantsGradient || wantsTangent || wantsLevelSets;
+
+  const arena = new WasmArena(module);
+
+  try {
+    const verticesPtr = arena.copyFloat32(geometry.vertices);
+    const edgesPtr = arena.copyUint32(geometry.edges);
+    const rotationPtr = arena.copyFloat32(geometry.rotationMatrix);
+    const basisPtr = arena.copyFloat32(geometry.basis);
+
+    const coeffPtr = hyperplane.coefficients.length ? arena.copyFloat32(hyperplane.coefficients) : 0;
+
+    let expressionPtr = 0;
+    let expressionLength = 0;
+    if (needsCalculus) {
+      const encoded = textEncoder.encode(expression);
+      expressionLength = encoded.length;
+      expressionPtr = arena.alloc(encoded.length + 1);
+      module.HEAPU8.set(encoded, expressionPtr);
+      module.HEAPU8[expressionPtr + encoded.length] = 0;
+    }
+
+    let probePtr = 0;
+    if (wantsGradient || wantsTangent) {
+      const probe = ensureSizedArray(calculus.probePoint, dimension);
+      probePtr = arena.copyFloat32(probe);
+    }
+
+    let levelValuesPtr = 0;
+    let levelSetCapacity = 0;
+    if (wantsLevelSets) {
+      levelSetCapacity = calculus.levelSetValues.length;
+      const values = new Float32Array(levelSetCapacity);
+      for (let i = 0; i < levelSetCapacity; i += 1) {
+        values[i] = calculus.levelSetValues[i];
+      }
+      levelValuesPtr = arena.copyFloat32(values);
+    }
+
+    const sliceCapacity = geometry.edgeCount;
+    const slicePositionsPtr = wantsSlice && sliceCapacity > 0 ? arena.alloc(sliceCapacity * 3 * bytesPerFloat) : 0;
+    const sliceCountPtr = wantsSlice ? arena.alloc(bytesPerUint32) : 0;
+    if (sliceCountPtr) {
+      module.HEAPU32[sliceCountPtr >> 2] = 0;
+    }
+
+    const gradientPtr = wantsGradient ? arena.alloc(6 * bytesPerFloat) : 0;
+    const tangentPtr = wantsTangent ? arena.alloc(12 * bytesPerFloat) : 0;
+
+    let levelCurvesPtr = 0;
+    let levelSizesPtr = 0;
+    let levelCountPtr = 0;
+    const levelCurveBuffers: { ptr: number; length: number }[] = [];
+    if (wantsLevelSets) {
+      const curveCapacity = Math.max(geometry.edgeCount, 1) * 3;
+      levelCurvesPtr = arena.alloc(levelSetCapacity * bytesPerUint32);
+      levelSizesPtr = arena.alloc(levelSetCapacity * bytesPerUint32);
+      levelCountPtr = arena.alloc(bytesPerUint32);
+      module.HEAPU32[levelCountPtr >> 2] = 0;
+
+      const curvePtrBase = levelCurvesPtr >> 2;
+      const sizePtrBase = levelSizesPtr >> 2;
+      for (let i = 0; i < levelSetCapacity; i += 1) {
+        const curvePtr = arena.alloc(curveCapacity * bytesPerFloat);
+        module.HEAPU32[curvePtrBase + i] = curvePtr;
+        module.HEAPU32[sizePtrBase + i] = curveCapacity;
+        levelCurveBuffers.push({ ptr: curvePtr, length: curveCapacity });
+      }
+    }
+
+    const geometryStructPtr = arena.alloc(7 * bytesPerUint32);
+    const geometryBase = geometryStructPtr >> 2;
+    module.HEAPU32[geometryBase + 0] = verticesPtr;
+    module.HEAPU32[geometryBase + 1] = geometry.vertexCount;
+    module.HEAPU32[geometryBase + 2] = geometry.dimension;
+    module.HEAPU32[geometryBase + 3] = edgesPtr;
+    module.HEAPU32[geometryBase + 4] = geometry.edgeCount;
+    module.HEAPU32[geometryBase + 5] = rotationPtr;
+    module.HEAPU32[geometryBase + 6] = basisPtr;
+
+    const hyperplaneStructPtr = arena.alloc(4 * bytesPerUint32);
+    const hyperplaneBase = hyperplaneStructPtr >> 2;
+    module.HEAPU32[hyperplaneBase + 0] = coeffPtr;
+    module.HEAPU32[hyperplaneBase + 1] = geometry.dimension;
+    module.HEAPF32[hyperplaneBase + 2] = hyperplane.offset;
+    module.HEAP32[hyperplaneBase + 3] = hyperplane.enabled ? 1 : 0;
+
+    const calculusStructPtr = arena.alloc(9 * bytesPerUint32);
+    const calculusBase = calculusStructPtr >> 2;
+    module.HEAPU32[calculusBase + 0] = expressionPtr;
+    module.HEAPU32[calculusBase + 1] = expressionLength;
+    module.HEAPU32[calculusBase + 2] = probePtr;
+    module.HEAPU32[calculusBase + 3] = levelValuesPtr;
+    module.HEAPU32[calculusBase + 4] = levelSetCapacity;
+    module.HEAP32[calculusBase + 5] = wantsGradient ? 1 : 0;
+    module.HEAP32[calculusBase + 6] = wantsTangent ? 1 : 0;
+    module.HEAP32[calculusBase + 7] = wantsLevelSets ? 1 : 0;
+    module.HEAPF32[calculusBase + 8] = calculus.gradientScale;
+
+    const buffersStructPtr = arena.alloc(11 * bytesPerUint32);
+    const buffersBase = buffersStructPtr >> 2;
+    module.HEAPU32[buffersBase + 0] = 0; // projected_vertices (unused)
+    module.HEAPU32[buffersBase + 1] = geometry.vertexCount;
+    module.HEAPU32[buffersBase + 2] = slicePositionsPtr;
+    module.HEAPU32[buffersBase + 3] = sliceCapacity;
+    module.HEAPU32[buffersBase + 4] = sliceCountPtr;
+    module.HEAPU32[buffersBase + 5] = gradientPtr;
+    module.HEAPU32[buffersBase + 6] = tangentPtr;
+    module.HEAPU32[buffersBase + 7] = levelCurvesPtr;
+    module.HEAPU32[buffersBase + 8] = levelSizesPtr;
+    module.HEAPU32[buffersBase + 9] = wantsLevelSets ? levelSetCapacity : 0;
+    module.HEAPU32[buffersBase + 10] = levelCountPtr;
+
+    const result = computeFn(geometryStructPtr, hyperplaneStructPtr, calculusStructPtr, buffersStructPtr);
+    if (result !== 0) {
+      const message = overlayErrorMessages[result] ?? "Overlay computation failed";
+      return { success: false, error: message };
+    }
+
+    const overlays: OverlayState = createEmptyOverlays();
+
+    if (wantsSlice && sliceCountPtr && slicePositionsPtr) {
+      const sliceCount = module.HEAPU32[sliceCountPtr >> 2];
+      if (sliceCount > 0) {
+        const sliceView = module.HEAPF32.subarray(
+          slicePositionsPtr / bytesPerFloat,
+          slicePositionsPtr / bytesPerFloat + sliceCount * 3
+        );
+        overlays.sliceGeometry = Float32Array.from(sliceView);
+      }
+    }
+
+    if (wantsGradient && gradientPtr) {
+      const gradientView = module.HEAPF32.subarray(gradientPtr / bytesPerFloat, gradientPtr / bytesPerFloat + 6);
+      overlays.gradientVectors = Float32Array.from(gradientView);
+    }
+
+    if (wantsTangent && tangentPtr) {
+      const tangentView = module.HEAPF32.subarray(tangentPtr / bytesPerFloat, tangentPtr / bytesPerFloat + 12);
+      overlays.tangentPatch = Float32Array.from(tangentView);
+    }
+
+    if (wantsLevelSets && levelCountPtr && levelCurvesPtr && levelSizesPtr) {
+      const curveCount = module.HEAPU32[levelCountPtr >> 2];
+      if (curveCount > 0) {
+        const curves: Float32Array[] = [];
+        const curvePtrBase = levelCurvesPtr >> 2;
+        const sizePtrBase = levelSizesPtr >> 2;
+        for (let i = 0; i < Math.min(curveCount, levelCurveBuffers.length); i += 1) {
+          const curvePtr = module.HEAPU32[curvePtrBase + i];
+          const floatCount = module.HEAPU32[sizePtrBase + i];
+          if (curvePtr && floatCount > 0) {
+            const curveView = module.HEAPF32.subarray(
+              curvePtr / bytesPerFloat,
+              curvePtr / bytesPerFloat + floatCount
+            );
+            curves.push(Float32Array.from(curveView));
+          }
+        }
+        overlays.levelSetCurves = curves.length > 0 ? curves : null;
+      }
+    }
+
+    if (wantsSlice && !overlays.sliceGeometry) {
+      overlays.sliceGeometry = new Float32Array();
+    }
+
+    return { success: true, overlays };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Overlay computation failed";
+    if (message.includes("not implemented")) {
+      return null;
+    }
+    return { success: false, error: message };
+  } finally {
+    arena.freeAll();
+  }
+};
+
+const computeOverlaysCpu = async (
   geometry: GeometryState,
   hyperplane: HyperplaneConfig,
   functionConfig: FunctionConfig,
   calculus: CalculusConfig,
   dimension: number
 ): Promise<ComputeResult> => {
-  // Simulate async computation
   await new Promise((resolve) => setTimeout(resolve, 50));
 
-  const overlays: OverlayState = {
-    sliceGeometry: null,
-    levelSetCurves: null,
-    gradientVectors: null,
-    tangentPatch: null,
-  };
+  const overlays = createEmptyOverlays();
 
   try {
     if (hyperplane.enabled && hyperplane.showIntersection) {
       overlays.sliceGeometry = sliceHyperplaneCpu(geometry, hyperplane);
     }
 
-  const expression = functionConfig.expression.trim();
-  const needsCalculus =
-    functionConfig.isValid &&
-    expression.length > 0 &&
-    (calculus.showGradient || calculus.showTangentPlane || (calculus.showLevelSets && calculus.levelSetValues.length > 0));
+    const expression = functionConfig.expression.trim();
+    const needsCalculus =
+      functionConfig.isValid &&
+      expression.length > 0 &&
+      (calculus.showGradient || calculus.showTangentPlane || (calculus.showLevelSets && calculus.levelSetValues.length > 0));
 
     if (needsCalculus) {
       const runtime = await getNdcalcRuntime();
@@ -191,6 +482,24 @@ export const computeOverlays = async (
       error: error instanceof Error ? error.message : "Computation failed",
     };
   }
+};
+
+export const computeOverlays = async (
+  geometry: GeometryState,
+  hyperplane: HyperplaneConfig,
+  functionConfig: FunctionConfig,
+  calculus: CalculusConfig,
+  dimension: number
+): Promise<ComputeResult> => {
+  const wasmAttempt = await computeOverlaysWithWasm(geometry, hyperplane, functionConfig, calculus, dimension);
+  if (wasmAttempt) {
+    if (wasmAttempt.success) {
+      return { overlays: wasmAttempt.overlays, error: null };
+    }
+    return { overlays: createEmptyOverlays(), error: wasmAttempt.error };
+  }
+
+  return computeOverlaysCpu(geometry, hyperplane, functionConfig, calculus, dimension);
 };
 
 const sliceHyperplaneCpu = (geometry: GeometryState, hyperplane: HyperplaneConfig): Float32Array | null => {
