@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(NDCALC_SOURCES
     src/parser.cpp
     src/bytecode.cpp
+    src/compiler.cpp
     src/vm.cpp
     src/autodiff.cpp
     src/finite_diff.cpp
