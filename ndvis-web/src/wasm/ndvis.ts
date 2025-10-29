@@ -47,6 +47,31 @@ const copyHeapToArray = (module: NdvisModule, ptr: number, target: Float32Array)
   target.set(view);
 };
 
+const textEncoder = new TextEncoder();
+
+const ensureUtf8Helpers = (module: NdvisModule) => {
+  const mutableModule = module as NdvisModule & {
+    stringToUTF8?: (value: string, ptr: number, maxBytesToWrite: number) => void;
+    lengthBytesUTF8?: (value: string) => number;
+  };
+
+  if (!mutableModule.lengthBytesUTF8) {
+    mutableModule.lengthBytesUTF8 = (value) => textEncoder.encode(value).length;
+  }
+
+  if (!mutableModule.stringToUTF8) {
+    mutableModule.stringToUTF8 = (value, ptr, maxBytesToWrite) => {
+      if (maxBytesToWrite <= 0) {
+        return;
+      }
+      const encoded = textEncoder.encode(value);
+      const bytesToWrite = Math.min(encoded.length, Math.max(0, maxBytesToWrite - 1));
+      module.HEAPU8.subarray(ptr, ptr + bytesToWrite).set(encoded.subarray(0, bytesToWrite));
+      module.HEAPU8[ptr + bytesToWrite] = 0;
+    };
+  }
+};
+
 export const createPcaWorkspace = (dimension: number): PcaWorkspace => ({
   basis: new Float32Array(dimension * 3),
   eigenvalues: new Float32Array(dimension),
@@ -149,6 +174,7 @@ export const loadNdvis: WasmLoader = async () => {
           },
         };
         const instance = await createModule(moduleOptions);
+        ensureUtf8Helpers(instance as NdvisModule);
         return instance as NdvisModule;
       } catch (error) {
         if (import.meta.env.DEV) {

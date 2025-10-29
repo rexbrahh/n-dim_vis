@@ -15,9 +15,31 @@ export const AppShell = () => {
   const PANEL_WIDTH_KEY = "hyperviz-panel-width";
   const PANEL_COLLAPSED_KEY = "hyperviz-panel-collapsed";
 
-  const [panelWidth, setPanelWidth] = useState<number>(320);
+  const getStoredPanelWidth = () => {
+    if (typeof window === "undefined") {
+      return 320;
+    }
+    const raw = window.localStorage.getItem(PANEL_WIDTH_KEY);
+    if (!raw) {
+      return 320;
+    }
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) {
+      return 320;
+    }
+    return Math.min(520, Math.max(240, parsed));
+  };
+
+  const getStoredCollapsed = () => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return window.localStorage.getItem(PANEL_COLLAPSED_KEY) === "true";
+  };
+
+  const [panelWidth, setPanelWidth] = useState<number>(() => getStoredPanelWidth());
   const [isResizing, setIsResizing] = useState<boolean>(false);
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => getStoredCollapsed());
 
   const startXRef = useRef(0);
   const startWidthRef = useRef(panelWidth);
@@ -29,26 +51,6 @@ export const AppShell = () => {
     { id: "calculus", label: "Calculus" },
     { id: "export", label: "Export" },
   ];
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const storedWidth = window.localStorage.getItem(PANEL_WIDTH_KEY);
-    const storedCollapsed = window.localStorage.getItem(PANEL_COLLAPSED_KEY);
-
-    if (storedWidth) {
-      const parsed = parseInt(storedWidth, 10);
-      if (!Number.isNaN(parsed)) {
-        setPanelWidth(Math.min(520, Math.max(240, parsed)));
-      }
-    }
-
-    if (storedCollapsed === 'true') {
-      setIsCollapsed(true);
-    }
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || isResizing) {
