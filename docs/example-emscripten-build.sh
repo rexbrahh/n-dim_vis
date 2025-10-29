@@ -1,15 +1,16 @@
 # From project root
+JS_OUT_DIR="ndvis-web/src/wasm"
 WASM_OUT_DIR="ndvis-web/public/wasm"
 
-rm -f "$WASM_OUT_DIR"/ndvis-wasm.js "$WASM_OUT_DIR"/ndvis-wasm.wasm
-mkdir -p "$WASM_OUT_DIR"
+rm -f "$JS_OUT_DIR"/ndvis-wasm.js "$WASM_OUT_DIR"/ndvis-wasm.wasm
+mkdir -p "$JS_OUT_DIR" "$WASM_OUT_DIR"
 emcmake cmake -S ndvis-core -B build-web
 emmake make -C build-web ndvis-core
 
 emcc \
   build-web/libndvis-core.a \
   build-web/ndcalc-core/libndcalc.a \
-  -o "$WASM_OUT_DIR"/ndvis-wasm.js \
+  -o "$JS_OUT_DIR"/ndvis-wasm.js \
   -sWASM=1 -O3 -flto -msimd128 \
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web \
   -sALLOW_MEMORY_GROWTH=1 \
@@ -22,5 +23,5 @@ pushd ndcalc-core/wasm >/dev/null
 bash build.sh
 popd >/dev/null
 
-cp ndcalc-core/wasm/dist/ndcalc_wasm.js "$WASM_OUT_DIR"/
+cp ndcalc-core/wasm/dist/ndcalc_wasm.js "$JS_OUT_DIR"/ndcalc/
 cp ndcalc-core/wasm/dist/ndcalc_wasm.wasm "$WASM_OUT_DIR"/

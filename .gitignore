@@ -3,6 +3,8 @@ ndvis-web/node_modules/
 ndvis-web/dist/
 ndvis-web/.turbo/
 ndvis-web/public/wasm/
+ndvis-web/src/wasm/ndvis-wasm.js
+ndvis-web/src/wasm/ndcalc/ndcalc_wasm.js
 
 # CMake/Emscripten build directories
 ndvis-core/build/

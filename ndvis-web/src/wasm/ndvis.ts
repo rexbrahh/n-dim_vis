@@ -1,3 +1,5 @@
+import createNdvisModuleRaw from "./ndvis-wasm.js";
+
 export type NdvisModule = {
   readonly HEAPF32: Float32Array;
   readonly HEAPU8: Uint8Array;
@@ -152,8 +154,6 @@ export const loadNdvis: WasmLoader = async () => {
       try {
         const wasmBase = "/wasm/";
         const cacheBuster = import.meta.env.DEV ? `?dev=${Date.now()}` : "";
-        const factoryModule = await import(/* @vite-ignore */ `${wasmBase}ndvis-wasm.js${cacheBuster}`);
-        const createModule = (factoryModule as any).default ?? factoryModule;
         const moduleOptions: Record<string, unknown> = {
           locateFile: (file: string) => `${wasmBase}${file}`,
           mainScriptUrlOrBlob: `${wasmBase}ndvis-wasm.js${cacheBuster}`,
@@ -161,7 +161,7 @@ export const loadNdvis: WasmLoader = async () => {
             console.error("ndvis wasm aborted", what);
           },
         };
-        const instance = await createModule(moduleOptions);
+        const instance = await createNdvisModuleRaw(moduleOptions);
         ensureUtf8Helpers(instance as NdvisModule);
         return instance as NdvisModule;
       } catch (error) {

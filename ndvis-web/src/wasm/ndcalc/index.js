@@ -2,6 +2,7 @@
  * ndcalc WASM wrapper with TypeScript-friendly API
  */
 
+import createNdcalcModuleRaw from "./ndcalc_wasm.js";
 export const ErrorCode = Object.freeze({
   OK: 0,
   PARSE: 1,
@@ -218,10 +219,9 @@ class NdcalcWrapper {
 export default async function createNdcalcModule() {
   const wasmBase = "/wasm/";
   const cacheBuster = import.meta.env?.DEV ? `?dev=${Date.now()}` : "";
-  const factoryModule = await import(/* @vite-ignore */ `${wasmBase}ndcalc_wasm.js${cacheBuster}`);
-  const createModule = factoryModule.default ?? factoryModule;
-  const module = await createModule({
+  const module = await createNdcalcModuleRaw({
     locateFile: (file) => `${wasmBase}${file}`,
+    mainScriptUrlOrBlob: `${wasmBase}ndcalc_wasm.js${cacheBuster}`,
   });
   return new NdcalcWrapper(module);
 }
