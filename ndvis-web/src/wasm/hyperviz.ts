@@ -21,6 +21,28 @@ import { createBindings as createNdvisBindings, type NdvisBindings } from "@/was
 const textEncoder = new TextEncoder();
 const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
 const bytesPerUint32 = Uint32Array.BYTES_PER_ELEMENT;
+const ensureNdcalcUtf8Helpers = (module: StubModule | (ReturnType<typeof createNdcalcModule> extends Promise<infer R> ? R : never)) => {
+  const mutableModule = module as StubModule & {
+    stringToUTF8?: (value: string, ptr: number, maxBytesToWrite: number) => void;
+    lengthBytesUTF8?: (value: string) => number;
+  };
+
+  if (!mutableModule.lengthBytesUTF8) {
+    mutableModule.lengthBytesUTF8 = (value) => textEncoder.encode(value).length;
+  }
+
+  if (!mutableModule.stringToUTF8) {
+    mutableModule.stringToUTF8 = (value, ptr, maxBytesToWrite) => {
+      if (maxBytesToWrite <= 0) {
+        return;
+      }
+      const encoded = textEncoder.encode(value);
+      const bytesToWrite = Math.min(encoded.length, Math.max(0, maxBytesToWrite - 1));
+      module.HEAPU8.subarray(ptr, ptr + bytesToWrite).set(encoded.subarray(0, bytesToWrite));
+      module.HEAPU8[ptr + bytesToWrite] = 0;
+    };
+  }
+};
 
 export type HyperVizModule = {
   // Expression parser and bytecode VM
@@ -77,6 +99,7 @@ const getNdcalcRuntime = async (): Promise<NdcalcRuntime> => {
   if (!ndcalcRuntimePromise) {
     ndcalcRuntimePromise = (async () => {
       const module = await createNdcalcModule();
+      ensureNdcalcUtf8Helpers(module);
       const ctx = module.contextCreate();
       return { module, ctx };
     })();
@@ -86,6 +109,7 @@ const getNdcalcRuntime = async (): Promise<NdcalcRuntime> => {
 
 export const __setNdcalcRuntimeForTests = (runtime: NdcalcRuntime | null) => {
   if (runtime) {
+    ensureNdcalcUtf8Helpers(runtime.module);
     ndcalcRuntimePromise = Promise.resolve(runtime);
   } else {
     ndcalcRuntimePromise = null;
