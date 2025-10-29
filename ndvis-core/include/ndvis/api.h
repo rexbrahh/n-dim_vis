@@ -41,6 +41,64 @@ void ndvis_compute_pca_basis(NdvisBuffer vertices, size_t vertex_count, size_t d
 // Caller must preallocate `basis`, `vertices`, and `eigenvalues` buffers (use malloc/_malloc in WASM) before invoking.
 void ndvis_compute_pca_with_values(NdvisBuffer vertices, size_t vertex_count, size_t dimension, NdvisBasis3 basis, NdvisBuffer eigenvalues);
 
+// Overlay computation API
+struct NdvisOverlayGeometry {
+  const float* vertices;
+  size_t vertex_count;
+  size_t dimension;
+  const ndvis_index_t* edges;
+  size_t edge_count;
+  const float* rotation_matrix;
+  const float* basis3;
+};
+
+struct NdvisOverlayHyperplane {
+  const float* coefficients;
+  size_t dimension;
+  float offset;
+  int enabled;
+};
+
+struct NdvisOverlayCalculus {
+  const char* expression_utf8;
+  size_t expression_length;
+  const float* probe_point;
+  const float* level_set_values;
+  size_t level_set_count;
+  int show_gradient;
+  int show_tangent_plane;
+  int show_level_sets;
+  float gradient_scale;
+};
+
+struct NdvisOverlayBuffers {
+  float* projected_vertices;
+  size_t projected_stride;
+  float* slice_positions;
+  size_t slice_capacity;
+  size_t* slice_count;
+  float* gradient_positions;
+  float* tangent_patch_positions;
+  float** level_set_curves;
+  size_t* level_set_sizes;
+  size_t level_set_capacity;
+  size_t* level_set_count;
+};
+
+enum NdvisOverlayResult {
+  NDVIS_OVERLAY_SUCCESS = 0,
+  NDVIS_OVERLAY_INVALID_INPUTS = 1,
+  NDVIS_OVERLAY_NULL_BUFFER = 2,
+  NDVIS_OVERLAY_EVAL_ERROR = 3,
+  NDVIS_OVERLAY_GRADIENT_ERROR = 4,
+};
+
+int ndvis_compute_overlays(
+    const NdvisOverlayGeometry* geometry,
+    const NdvisOverlayHyperplane* hyperplane,
+    const NdvisOverlayCalculus* calculus,
+    NdvisOverlayBuffers* buffers);
+
 // Hyperplane utilities
 struct NdvisHyperplane {
   const float* normal;  // n-dimensional unit normal vector
@@ -67,4 +125,3 @@ NdvisSliceResult ndvis_slice_polytope(NdvisBuffer vertices, size_t vertex_count,
 #ifdef __cplusplus
 }
 #endif
-
