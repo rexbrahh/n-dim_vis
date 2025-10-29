@@ -256,6 +256,15 @@ const computeOverlaysWithWasm = async (
     return null;
   }
 
+  if (!module.HEAPF32 || !module.HEAPU8 || !module.HEAPU32) {
+    console.warn("ndvis wasm heaps unavailable; falling back to CPU", {
+      hasF32: Boolean(module.HEAPF32),
+      hasU8: Boolean(module.HEAPU8),
+      hasU32: Boolean(module.HEAPU32),
+    });
+    return null;
+  }
+
   const expression = functionConfig.expression.trim();
   const calculusEnabled =
     functionConfig.isValid &&
