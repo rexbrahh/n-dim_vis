@@ -9,6 +9,12 @@
 
 ## 1) Build C++ core to WASM with Emscripten
 
+Run `docs/example-emscripten-build.sh` from the repo root once emsdk is active. It wires `ndcalc-core` into the wasm archive and exports `_ndvis_compute_overlays`, `_ndvis_compute_pca_with_values`, `_ndvis_generate_hypercube`, plus `_malloc/_free`. SIMD is enabled with `-msimd128` (no extra `-sWASM_SIMD` flag needed on current Emscripten). The script emits `ndvis-web/src/wasm/ndvis-wasm.js` and `ndvis-wasm.wasm`, which the front-end loader picks up automatically when present.
+
+For the multi-thread build to run in the browser you must serve the UI from a cross-origin-isolated context (COOP/COEP). The dev server already injects the proper headers (see `vite.config.ts`); restart `npm run dev` after rebuilding the wasm bundle so the headers take effect.
+
+> Note: If you rebuilt the wasm bundle before this change, rerun the script so the additional runtime helpers (`stringToUTF8`, `lengthBytesUTF8`) are exported—without them expression validation will fail with `this.module.lengthBytesUTF8 is not a function` in the console.
+
 ### Example CMakeLists.txt (ndvis-core)
 
 ```cmake
