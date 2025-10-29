@@ -63,7 +63,7 @@ bool FiniteDiff::compute_hessian(const BytecodeProgram& program,
     }
 
     std::vector<double> inputs_perturbed(inputs, inputs + num_inputs);
-    double f_base, f_i_plus, f_i_minus, f_j_plus, f_j_minus, f_ij;
+    double f_base, f_i_plus, f_i_minus, f_j_plus, f_ij;
 
     // Compute base value
     if (!vm.execute(program, inputs, num_inputs, f_base)) {
