@@ -21,21 +21,19 @@ import { createBindings as createNdvisBindings, type NdvisBindings } from "@/was
 const textEncoder = new TextEncoder();
 const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
 const bytesPerUint32 = Uint32Array.BYTES_PER_ELEMENT;
-const ensureNdcalcUtf8Helpers = (module: StubModule | (ReturnType<typeof createNdcalcModule> extends Promise<infer R> ? R : never)) => {
-  const mutableModule = module as StubModule & {
-    stringToUTF8?: (value: string, ptr: number, maxBytesToWrite: number) => void;
-    lengthBytesUTF8?: (value: string) => number;
-    HEAPU8?: Uint8Array;
-  };
+const ensureNdcalcUtf8Helpers = (
+  moduleOrWrapper: StubModule | (ReturnType<typeof createNdcalcModule> extends Promise<infer R> ? R : never)
+) => {
+  const target: any = (moduleOrWrapper as any).module ?? moduleOrWrapper;
+  const heap: Uint8Array | undefined = target.HEAPU8 ?? (moduleOrWrapper as any).HEAPU8;
 
-  if (!mutableModule.lengthBytesUTF8) {
-    mutableModule.lengthBytesUTF8 = (value) => textEncoder.encode(value).length;
+  if (!target.lengthBytesUTF8) {
+    target.lengthBytesUTF8 = (value: string) => textEncoder.encode(value).length;
   }
 
-  if (!mutableModule.stringToUTF8) {
-    const heap = mutableModule.HEAPU8;
+  if (!target.stringToUTF8) {
     if (heap) {
-      mutableModule.stringToUTF8 = (value, ptr, maxBytesToWrite) => {
+      target.stringToUTF8 = (value: string, ptr: number, maxBytesToWrite: number) => {
         if (maxBytesToWrite <= 0) {
           return;
         }
@@ -45,8 +43,8 @@ const ensureNdcalcUtf8Helpers = (module: StubModule | (ReturnType<typeof createN
         heap[ptr + bytesToWrite] = 0;
       };
     } else {
-      mutableModule.stringToUTF8 = () => {
-        /* no-op for stub runtimes */
+      target.stringToUTF8 = () => {
+        /* stub runtime; nothing to copy */
       };
     }
   }
