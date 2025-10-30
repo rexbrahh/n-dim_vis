@@ -151,6 +151,7 @@ export const __setNdcalcRuntimeForTests = (runtime: NdcalcRuntime | null) => {
 };
 
 const ensureAdMode = (runtime: NdcalcRuntime, mode: CalculusConfig["adMode"], epsilon = 1e-5) => {
+  // Context-level: affects new compilations
   switch (mode) {
     case "forward":
       runtime.module.setADMode(runtime.ctx, ADMode.FORWARD);
@@ -161,6 +162,22 @@ const ensureAdMode = (runtime: NdcalcRuntime, mode: CalculusConfig["adMode"], ep
       break;
     default:
       runtime.module.setADMode(runtime.ctx, ADMode.AUTO);
+      break;
+  }
+};
+
+const ensureProgramAdMode = (runtime: NdcalcRuntime, program: number, mode: CalculusConfig["adMode"], epsilon = 1e-5) => {
+  // Program-level: affects existing compiled programs (runtime configuration)
+  switch (mode) {
+    case "forward":
+      runtime.module.programSetADMode(program, ADMode.FORWARD);
+      break;
+    case "finite-diff":
+      runtime.module.programSetADMode(program, ADMode.FINITE_DIFF);
+      runtime.module.programSetFDEpsilon(program, epsilon);
+      break;
+    default:
+      runtime.module.programSetADMode(program, ADMode.AUTO);
       break;
   }
 };
@@ -511,6 +528,9 @@ const computeOverlaysCpu = async (
         storeProgramInCache(cacheKey, compiledProgram);
         program = compiledProgram;
       }
+
+      // Apply AD mode to program (works for both new and cached programs)
+      ensureProgramAdMode(runtime, program, calculus.adMode);
 
       try {
         if (calculus.showGradient && calculus.probePoint) {

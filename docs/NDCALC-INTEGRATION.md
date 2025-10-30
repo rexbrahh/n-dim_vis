@@ -17,7 +17,9 @@ This document details the implementation of ndcalc-core, the expression VM and a
 - **Added:** `ndcalc_program_set_ad_mode()` - runtime configuration for compiled programs
 - **Added:** `ndcalc_program_set_fd_epsilon()` - runtime epsilon tuning
 - **Fixed:** `ndcalc_gradient()` and `ndcalc_hessian()` now honor program's `ad_mode`
-- **Design:** Context setters affect new compilations; program setters affect existing programs
+- **Design:** Programs inherit context defaults at compile time, then use program-level setters for runtime changes
+  - Context setters (`ndcalc_set_*`): set defaults for new compilations
+  - Program setters (`ndcalc_program_set_*`): reconfigure existing programs
 - Mode behavior:
   - `NDCALC_AD_MODE_FORWARD`: Force forward-mode AD only (fails if AD unavailable)
   - `NDCALC_AD_MODE_FINITE_DIFF`: Force finite differences only (fails if FD unavailable)
@@ -351,7 +353,10 @@ module.contextDestroy(ctx);
 - [x] Parser: Fix power operator right-associativity
 - [x] Parser: Add stack depth limiting (default: 100)
 - [x] API: Honor AD mode settings (AUTO/FORWARD/FINITE_DIFF)
-- [x] API: Program-level runtime configuration (set_ad_mode, set_fd_epsilon)
+- [x] API: Program-level runtime configuration (native layer)
+- [x] WASM: Export program-level setters (wasm_program_set_*)
+- [x] JS: Add programSetADMode/programSetFDEpsilon to wrapper
+- [x] Integration: Use program setters in hyperviz.ts for cached programs
 - [x] Tests: Add comprehensive test suite (19 tests)
 - [x] Tests: Cross-platform M_PI compatibility
 - [x] Tests: Verify both AD and FD paths are exercised

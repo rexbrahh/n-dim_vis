@@ -77,6 +77,16 @@ void wasm_set_fd_epsilon(ndcalc_context_handle ctx, double epsilon) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+void wasm_program_set_ad_mode(ndcalc_program_handle program, ndcalc_ad_mode_t mode) {
+    ndcalc_program_set_ad_mode(program, mode);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void wasm_program_set_fd_epsilon(ndcalc_program_handle program, double epsilon) {
+    ndcalc_program_set_fd_epsilon(program, epsilon);
+}
+
+EMSCRIPTEN_KEEPALIVE
 const char* wasm_error_string(ndcalc_error_t error) {
     return ndcalc_error_string(error);
 }

@@ -77,14 +77,24 @@ export interface NdcalcModule {
   hessian(program: number, inputs: number[]): [ErrorCode, number[]];
 
   /**
-   * Set automatic differentiation mode
+   * Set automatic differentiation mode (context-level, affects new compilations)
    */
   setADMode(ctx: number, mode: ADMode): void;
 
   /**
-   * Set finite difference epsilon
+   * Set finite difference epsilon (context-level, affects new compilations)
    */
   setFDEpsilon(ctx: number, epsilon: number): void;
+
+  /**
+   * Set automatic differentiation mode (program-level, runtime)
+   */
+  programSetADMode(program: number, mode: ADMode): void;
+
+  /**
+   * Set finite difference epsilon (program-level, runtime)
+   */
+  programSetFDEpsilon(program: number, epsilon: number): void;
 
   /**
    * Get error string for error code
