@@ -1,4 +1,47 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// Mock the WASM modules to avoid import errors when the binaries aren't built
+vi.mock("@/wasm/ndcalc/index.js", () => ({
+  ErrorCode: {
+    OK: 0,
+    PARSE: 1,
+    INVALID_EXPR: 2,
+    EVAL: 3,
+    OUT_OF_MEMORY: 4,
+    INVALID_DIMENSION: 5,
+    NULL_POINTER: 6,
+  },
+  ADMode: {
+    AUTO: 0,
+    FORWARD: 1,
+    FINITE_DIFF: 2,
+  },
+  default: () => Promise.resolve({
+    contextCreate: () => 1,
+    contextDestroy: () => {},
+    compile: () => [0, 1],
+    programDestroy: () => {},
+    gradient: () => [0, []],
+    hessian: () => [0, []],
+    eval: () => [0, 0],
+    evalBatch: () => [0, []],
+    setADMode: () => {},
+    setFDEpsilon: () => {},
+    errorString: () => "OK",
+    getLastErrorMessage: () => "",
+  }),
+}));
+
+vi.mock("./ndvis-wasm.js", () => ({
+  default: () => Promise.resolve({
+    _malloc: () => 0,
+    _free: () => {},
+    HEAPF32: new Float32Array(),
+    HEAPU8: new Uint8Array(),
+    HEAPU32: new Uint32Array(),
+    HEAP32: new Int32Array(),
+  }),
+}));
 
 import { computeOverlays, __setNdcalcRuntimeForTests } from "@/wasm/hyperviz";
 import { generateHypercubeGeometry } from "@/state/appState";
