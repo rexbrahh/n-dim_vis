@@ -3,7 +3,28 @@
 ## 1) Geometry & Rotations
 - **n‑cube:** vertices `v ∈ {−1,+1}^n`, edges connect ids at Hamming distance 1.
 - **Givens rotation G(i,j,θ):** rotate in coordinate plane (i,j). Composite R = ∏ G.
+  - Single rotation: `G(i,j,θ)[row, i] = cos(θ) * R[row, i] - sin(θ) * R[row, j]`
+  - Single rotation: `G(i,j,θ)[row, j] = sin(θ) * R[row, i] + cos(θ) * R[row, j]`
+  - Batched application: apply planes sequentially to mutation matrix in-place
 - **Projection:** choose orthonormal `B3 ∈ R^{n×3}`, then `P3 = V Rᵀ B3`.
+
+### Drift Correction & QR Re-orthonormalization
+- **Orthogonality drift:** measure quality of rotation matrix via `δ = ||R^T R - I||_F` (Frobenius norm)
+- **Drift accumulation:** numerical errors accumulate during repeated Givens rotations
+- **QR correction:** apply Modified Gram-Schmidt re-orthonormalization periodically
+  - Configurable cadence (default: every 100 frames)
+  - Threshold-based trigger (default: δ > 0.01)
+- **Implementation:** `reorthonormalize(R, n)` restores orthonormality with O(n³) cost
+- **Stability guarantee:** with periodic QR, drift remains bounded (< 0.01) over extended sessions
+
+### Rotation API
+- **C API:** `ndvis_apply_rotations(matrix*, order, planes*, plane_count)`
+  - Struct: `NdvisRotationPlane { u32 i, u32 j, f32 theta }` (12 bytes)
+- **WASM bindings:** `applyRotations()`, `computeOrthogonalityDrift()`, `reorthonormalize()`
+  - Initialized on app startup via `initializeWasmBindings()` in App.tsx
+  - Plane packing: 3 x 32-bit values per plane (no padding)
+- **WebGPU compute:** `rotate_givens.wgsl` parallelizes rotation across matrix rows (64 threads/workgroup)
+- **Performance:** native WASM preferred when available, JS fallback otherwise
 
 ## 2) Hyperplanes & Slices
 - **Hyperplane:** \(H = \{x \in \mathbb{R}^n \mid a\cdot x = b\}\), `a` normalized.

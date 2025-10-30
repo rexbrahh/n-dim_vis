@@ -24,7 +24,6 @@ struct NdvisBasis3 {
   size_t dimension;
 };
 
-// Geometry helpers
 size_t ndvis_hypercube_vertex_count(int dimension);
 size_t ndvis_hypercube_edge_count(int dimension);
 void ndvis_generate_hypercube(int dimension, NdvisBuffer vertices, NdvisIndexBuffer edges);
@@ -121,6 +120,22 @@ void ndvis_classify_vertices(NdvisBuffer vertices, size_t vertex_count, size_t d
 // Slice a polytope with a hyperplane
 // Caller must preallocate out_points (dimension * max_edges) and out_edge_indices (max_edges)
 NdvisSliceResult ndvis_slice_polytope(NdvisBuffer vertices, size_t vertex_count, size_t dimension, NdvisIndexBuffer edges, NdvisHyperplane hyperplane, NdvisBuffer out_points, NdvisIndexBuffer out_edge_indices);
+
+// Rotation API
+struct NdvisRotationPlane {
+  unsigned int i;
+  unsigned int j;
+  float theta;
+};
+
+// Apply a batch of Givens rotation planes to a rotation matrix (in-place, row-major)
+void ndvis_apply_rotations(float* matrix, size_t order, const NdvisRotationPlane* planes, size_t plane_count);
+
+// Compute orthogonality drift metric: Frobenius norm of (R^T R - I)
+float ndvis_compute_orthogonality_drift(const float* matrix, size_t order);
+
+// Re-orthonormalize a rotation matrix using QR decomposition (modified Gram-Schmidt)
+void ndvis_reorthonormalize(float* matrix, size_t order);
 
 #ifdef __cplusplus
 }

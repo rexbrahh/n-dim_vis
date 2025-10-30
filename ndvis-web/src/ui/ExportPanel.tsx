@@ -14,25 +14,39 @@ export const ExportPanel = () => {
     setExportProgress(0);
 
     try {
-      // TODO: Wire to actual export pipeline when headless renderer is available
-      // This would:
-      // 1. Serialize current state to JSON job spec
-      // 2. Either call headless WASM/native renderer or capture canvas frames
-      // 3. Emit PNG/SVG/MP4 based on format selection
-
-      // Simulate export progress
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        setExportProgress(i);
+      const { exportScene, downloadBlob } = await import("@/utils/export");
+      
+      const canvas = document.querySelector("canvas");
+      if (!canvas) {
+        throw new Error("Canvas not found");
       }
 
-      // For now, just log the configuration
-      console.log("Export configuration:", exportConfig);
-      alert(`Export completed! Format: ${exportConfig.format.toUpperCase()}`);
+      setExportProgress(30);
+      
+      const blob = await exportScene(canvas, {
+        format: exportConfig.format === "mp4" ? "png" : exportConfig.format,
+        width: exportConfig.resolution[0],
+        height: exportConfig.resolution[1],
+        includeOverlays: exportConfig.includeOverlays,
+      });
+
+      setExportProgress(80);
+
+      if (blob) {
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+        const filename = `ndvis-export-${timestamp}.${exportConfig.format === "mp4" ? "png" : exportConfig.format}`;
+        downloadBlob(blob, filename);
+      }
+
+      setExportProgress(100);
+      
+      setTimeout(() => {
+        setIsExporting(false);
+        setExportProgress(0);
+      }, 500);
     } catch (error) {
       console.error("Export failed:", error);
       alert("Export failed. Check console for details.");
-    } finally {
       setIsExporting(false);
       setExportProgress(0);
     }

@@ -234,6 +234,276 @@ int main() {
   }
 
   {
+    const int dimension = 4;
+    const std::size_t vertex_count = ndvis_hypercube_vertex_count(dimension);
+    const std::size_t edge_count = ndvis_hypercube_edge_count(dimension);
+    assert(vertex_count == 16);
+    assert(edge_count == 32);
+
+    float vertices[4 * 16] = {0.0f};
+    unsigned int edges[32 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 4 * 16};
+    NdvisIndexBuffer edge_buffer{edges, 32 * 2};
+    ndvis_generate_hypercube(dimension, vertex_buffer, edge_buffer);
+
+    for (std::size_t v = 0; v < vertex_count; ++v) {
+      for (int axis = 0; axis < dimension; ++axis) {
+        const float coord = vertices[axis * vertex_count + v];
+        const float expected = ((v >> axis) & 1U) ? 1.0f : -1.0f;
+        assert(approx_equal(coord, expected));
+      }
+    }
+
+    bool edges_valid = true;
+    for (std::size_t e = 0; e < edge_count; ++e) {
+      const unsigned int u = edges[2 * e];
+      const unsigned int v = edges[2 * e + 1];
+      unsigned int hamming = 0;
+      for (unsigned int bit = 0; bit < static_cast<unsigned int>(dimension); ++bit) {
+        if (((u >> bit) & 1U) != ((v >> bit) & 1U)) ++hamming;
+      }
+      edges_valid &= (hamming == 1);
+    }
+    assert(edges_valid);
+  }
+
+  {
+    const int dimension = 5;
+    const std::size_t vertex_count = ndvis_simplex_vertex_count(dimension);
+    const std::size_t edge_count = ndvis_simplex_edge_count(dimension);
+    assert(vertex_count == 6);
+    assert(edge_count == 15);
+
+    float vertices[5 * 6] = {0.0f};
+    unsigned int edges[15 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 5 * 6};
+    NdvisIndexBuffer edge_buffer{edges, 15 * 2};
+    ndvis_generate_simplex(dimension, vertex_buffer, edge_buffer);
+
+    assert(approx_equal(vertices[0], 0.0f));
+    for (int axis = 0; axis < dimension; ++axis) {
+      const float coord = vertices[axis * vertex_count + (axis + 1)];
+      assert(approx_equal(coord, 1.0f));
+    }
+
+    std::size_t edge_index = 0;
+    for (std::size_t a = 0; a < vertex_count; ++a) {
+      for (std::size_t b = a + 1; b < vertex_count; ++b) {
+        assert(edges[edge_index * 2] == a);
+        assert(edges[edge_index * 2 + 1] == b);
+        ++edge_index;
+      }
+    }
+    assert(edge_index == edge_count);
+  }
+
+  {
+    const int dimension = 6;
+    const std::size_t vertex_count = ndvis_orthoplex_vertex_count(dimension);
+    const std::size_t edge_count = ndvis_orthoplex_edge_count(dimension);
+    assert(vertex_count == 12);
+    assert(edge_count == 60);
+
+    float vertices[6 * 12] = {0.0f};
+    unsigned int edges[60 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 6 * 12};
+    NdvisIndexBuffer edge_buffer{edges, 60 * 2};
+    ndvis_generate_orthoplex(dimension, vertex_buffer, edge_buffer);
+
+    for (int axis = 0; axis < dimension; ++axis) {
+      const std::size_t pos_idx = axis * 2;
+      const std::size_t neg_idx = pos_idx + 1;
+      assert(approx_equal(vertices[axis * vertex_count + pos_idx], 1.0f));
+      assert(approx_equal(vertices[axis * vertex_count + neg_idx], -1.0f));
+      for (int other_axis = 0; other_axis < dimension; ++other_axis) {
+        if (other_axis != axis) {
+          assert(approx_equal(vertices[other_axis * vertex_count + pos_idx], 0.0f));
+          assert(approx_equal(vertices[other_axis * vertex_count + neg_idx], 0.0f));
+        }
+      }
+    }
+
+    bool edges_valid = true;
+    for (std::size_t e = 0; e < edge_count; ++e) {
+      const unsigned int u = edges[2 * e];
+      const unsigned int v = edges[2 * e + 1];
+      int u_axis = u / 2;
+      int v_axis = v / 2;
+      edges_valid &= (u_axis != v_axis);
+    }
+    assert(edges_valid);
+  }
+
+  {
+    const int dimension = 8;
+    const std::size_t vertex_count = ndvis_hypercube_vertex_count(dimension);
+    const std::size_t edge_count = ndvis_hypercube_edge_count(dimension);
+    assert(vertex_count == 256);
+    assert(edge_count == 1024);
+
+    float vertices[8 * 256] = {0.0f};
+    unsigned int edges[1024 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 8 * 256};
+    NdvisIndexBuffer edge_buffer{edges, 1024 * 2};
+    ndvis_generate_hypercube(dimension, vertex_buffer, edge_buffer);
+
+    for (int axis = 0; axis < dimension; ++axis) {
+      for (std::size_t v = 0; v < vertex_count; ++v) {
+        const float coord = vertices[axis * vertex_count + v];
+        const float expected = ((v >> axis) & 1U) ? 1.0f : -1.0f;
+        assert(approx_equal(coord, expected));
+      }
+    }
+  }
+
+  {
+    float matrix[9] = {
+        1.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 1.0f,
+        0.0f, 0.0f, 1.0f,
+    };
+    ndvis::reorthonormalize(matrix, 3);
+
+    for (int col = 0; col < 3; ++col) {
+      float norm = 0.0f;
+      for (int row = 0; row < 3; ++row) {
+        const float value = matrix[row * 3 + col];
+        norm += value * value;
+      }
+      assert(approx_equal(norm, 1.0f, 1e-3f));
+    }
+  }
+
+  {
+    const int dimension = 4;
+    const std::size_t vertex_count = ndvis_hypercube_vertex_count(dimension);
+    const std::size_t edge_count = ndvis_hypercube_edge_count(dimension);
+    assert(vertex_count == 16);
+    assert(edge_count == 32);
+
+    float vertices[4 * 16] = {0.0f};
+    unsigned int edges[32 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 4 * 16};
+    NdvisIndexBuffer edge_buffer{edges, 32 * 2};
+    ndvis_generate_hypercube(dimension, vertex_buffer, edge_buffer);
+
+    for (std::size_t v = 0; v < vertex_count; ++v) {
+      for (int axis = 0; axis < dimension; ++axis) {
+        const float coord = vertices[axis * vertex_count + v];
+        const float expected = ((v >> axis) & 1U) ? 1.0f : -1.0f;
+        assert(approx_equal(coord, expected));
+      }
+    }
+
+    bool edges_valid = true;
+    for (std::size_t e = 0; e < edge_count; ++e) {
+      const unsigned int u = edges[2 * e];
+      const unsigned int v = edges[2 * e + 1];
+      unsigned int hamming = 0;
+      for (unsigned int bit = 0; bit < static_cast<unsigned int>(dimension); ++bit) {
+        if (((u >> bit) & 1U) != ((v >> bit) & 1U)) ++hamming;
+      }
+      edges_valid &= (hamming == 1);
+    }
+    assert(edges_valid);
+  }
+
+  {
+    const int dimension = 5;
+    const std::size_t vertex_count = ndvis::simplex_vertex_count(dimension);
+    const std::size_t edge_count = ndvis::simplex_edge_count(dimension);
+    assert(vertex_count == 6);
+    assert(edge_count == 15);
+
+    float vertices[5 * 6] = {0.0f};
+    unsigned int edges[15 * 2] = {0};
+
+    ndvis::BufferView vertex_buffer{vertices, 5 * 6};
+    ndvis::IndexBufferView edge_buffer{edges, 15 * 2};
+    ndvis::generate_simplex(dimension, vertex_buffer, edge_buffer);
+
+    assert(approx_equal(vertices[0], 0.0f));
+    for (int axis = 0; axis < dimension; ++axis) {
+      const float coord = vertices[axis * vertex_count + (axis + 1)];
+      assert(approx_equal(coord, 1.0f));
+    }
+
+    std::size_t edge_index = 0;
+    for (std::size_t a = 0; a < vertex_count; ++a) {
+      for (std::size_t b = a + 1; b < vertex_count; ++b) {
+        assert(edges[edge_index * 2] == a);
+        assert(edges[edge_index * 2 + 1] == b);
+        ++edge_index;
+      }
+    }
+    assert(edge_index == edge_count);
+  }
+
+  {
+    const int dimension = 6;
+    const std::size_t vertex_count = ndvis::orthoplex_vertex_count(dimension);
+    const std::size_t edge_count = ndvis::orthoplex_edge_count(dimension);
+    assert(vertex_count == 12);
+    assert(edge_count == 60);
+
+    float vertices[6 * 12] = {0.0f};
+    unsigned int edges[60 * 2] = {0};
+
+    ndvis::BufferView vertex_buffer{vertices, 6 * 12};
+    ndvis::IndexBufferView edge_buffer{edges, 60 * 2};
+    ndvis::generate_orthoplex(dimension, vertex_buffer, edge_buffer);
+
+    for (int axis = 0; axis < dimension; ++axis) {
+      const std::size_t pos_idx = axis * 2;
+      const std::size_t neg_idx = pos_idx + 1;
+      assert(approx_equal(vertices[axis * vertex_count + pos_idx], 1.0f));
+      assert(approx_equal(vertices[axis * vertex_count + neg_idx], -1.0f));
+      for (int other_axis = 0; other_axis < dimension; ++other_axis) {
+        if (other_axis != axis) {
+          assert(approx_equal(vertices[other_axis * vertex_count + pos_idx], 0.0f));
+          assert(approx_equal(vertices[other_axis * vertex_count + neg_idx], 0.0f));
+        }
+      }
+    }
+
+    bool edges_valid = true;
+    for (std::size_t e = 0; e < edge_count; ++e) {
+      const unsigned int u = edges[2 * e];
+      const unsigned int v = edges[2 * e + 1];
+      int u_axis = u / 2;
+      int v_axis = v / 2;
+      edges_valid &= (u_axis != v_axis);
+    }
+    assert(edges_valid);
+  }
+
+  {
+    const int dimension = 8;
+    const std::size_t vertex_count = ndvis_hypercube_vertex_count(dimension);
+    assert(vertex_count == 256);
+
+    float vertices[8 * 256] = {0.0f};
+    unsigned int edges[1024 * 2] = {0};
+
+    NdvisBuffer vertex_buffer{vertices, 8 * 256};
+    NdvisIndexBuffer edge_buffer{edges, 1024 * 2};
+    ndvis_generate_hypercube(dimension, vertex_buffer, edge_buffer);
+
+    for (int axis = 0; axis < dimension; ++axis) {
+      for (std::size_t v = 0; v < vertex_count; ++v) {
+        const float coord = vertices[axis * vertex_count + v];
+        const float expected = ((v >> axis) & 1U) ? 1.0f : -1.0f;
+        assert(approx_equal(coord, expected));
+      }
+    }
+  }
+
+  {
     float matrix[9] = {
         1.0f, 1.0f, 0.0f,
         0.0f, 1.0f, 1.0f,
@@ -489,6 +759,154 @@ int main() {
 
     for (std::size_t i = 0; i < level_sizes[0]; i += 3) {
       assert(approx_equal(level_curve_storage[i], 0.0f));
+    }
+  }
+
+  // Test batched rotations with drift accumulation
+  {
+    const std::size_t dimension = 4;
+    float matrix[16] = {0.0f};
+    for (std::size_t i = 0; i < dimension; ++i) {
+      matrix[i * dimension + i] = 1.0f;
+    }
+
+    // Apply 10 small rotation planes
+    ndvis::RotationPlane planes[10];
+    for (std::size_t p = 0; p < 10; ++p) {
+      planes[p].i = 0;
+      planes[p].j = 1;
+      planes[p].theta = 0.01f;  // Small rotation
+    }
+
+    ndvis::apply_rotations(matrix, dimension, planes, 10);
+
+    // After 10 small rotations, should still be close to orthonormal
+    const float drift_initial = ndvis::compute_orthogonality_drift(matrix, dimension);
+    assert(drift_initial < 1e-3f);
+  }
+
+  // Test long rotation sequence with QR re-orthonormalization
+  {
+    const std::size_t dimension = 5;
+    float matrix[25] = {0.0f};
+    for (std::size_t i = 0; i < dimension; ++i) {
+      matrix[i * dimension + i] = 1.0f;
+    }
+
+    // Simulate 1000 small rotation steps (like a long animation)
+    const std::size_t num_batches = 100;
+    const std::size_t planes_per_batch = 10;
+    const float qr_threshold = 0.01f;  // Re-orthonormalize if drift exceeds this
+
+    for (std::size_t batch = 0; batch < num_batches; ++batch) {
+      ndvis::RotationPlane planes[10];
+      for (std::size_t p = 0; p < planes_per_batch; ++p) {
+        planes[p].i = (batch + p) % dimension;
+        planes[p].j = (batch + p + 1) % dimension;
+        planes[p].theta = 0.001f;  // Very small rotation per step
+      }
+
+      ndvis::apply_rotations_incremental(matrix, dimension, planes, planes_per_batch);
+
+      // Check drift and re-orthonormalize if needed
+      const float drift = ndvis::compute_orthogonality_drift(matrix, dimension);
+      if (drift > qr_threshold) {
+        ndvis::reorthonormalize(matrix, dimension);
+      }
+    }
+
+    // Final drift should be minimal after QR corrections
+    const float final_drift = ndvis::compute_orthogonality_drift(matrix, dimension);
+    assert(final_drift < 1e-2f);
+
+    // Verify orthonormality: columns should be unit length
+    for (std::size_t col = 0; col < dimension; ++col) {
+      float norm = 0.0f;
+      for (std::size_t row = 0; row < dimension; ++row) {
+        const float value = matrix[row * dimension + col];
+        norm += value * value;
+      }
+      assert(approx_equal(norm, 1.0f, 1e-2f));
+    }
+
+    // Verify orthogonality: dot products between distinct columns should be ~0
+    for (std::size_t col_a = 0; col_a < dimension; ++col_a) {
+      for (std::size_t col_b = col_a + 1; col_b < dimension; ++col_b) {
+        float dot = 0.0f;
+        for (std::size_t row = 0; row < dimension; ++row) {
+          dot += matrix[row * dimension + col_a] * matrix[row * dimension + col_b];
+        }
+        assert(approx_equal(dot, 0.0f, 1e-2f));
+      }
+    }
+  }
+
+  // Test C API rotation functions
+  {
+    const std::size_t dimension = 4;
+    float matrix[16] = {0.0f};
+    for (std::size_t i = 0; i < dimension; ++i) {
+      matrix[i * dimension + i] = 1.0f;
+    }
+
+    NdvisRotationPlane planes[3];
+    planes[0].i = 0; planes[0].j = 1; planes[0].theta = 0.1f;
+    planes[1].i = 1; planes[1].j = 2; planes[1].theta = 0.2f;
+    planes[2].i = 2; planes[2].j = 3; planes[2].theta = 0.15f;
+
+    ndvis_apply_rotations(matrix, dimension, planes, 3);
+
+    // Check that rotation was applied (matrix changed)
+    bool matrix_changed = false;
+    for (std::size_t i = 0; i < dimension * dimension; ++i) {
+      const std::size_t row = i / dimension;
+      const std::size_t col = i % dimension;
+      const float expected = (row == col) ? 1.0f : 0.0f;
+      if (!approx_equal(matrix[i], expected, 0.01f)) {
+        matrix_changed = true;
+        break;
+      }
+    }
+    assert(matrix_changed);
+
+    // Drift should still be small
+    const float drift = ndvis_compute_orthogonality_drift(matrix, dimension);
+    assert(drift < 1e-3f);
+
+    // Test QR re-orthonormalization via C API
+    ndvis_reorthonormalize(matrix, dimension);
+    const float drift_after_qr = ndvis_compute_orthogonality_drift(matrix, dimension);
+    assert(drift_after_qr < 1e-5f);
+  }
+
+  // Test extreme drift correction scenario
+  {
+    const std::size_t dimension = 3;
+    float matrix[9] = {
+        0.99f, 0.05f, 0.02f,
+        0.05f, 0.98f, 0.03f,
+        0.02f, 0.03f, 0.97f,
+    };
+
+    // Initial drift should be noticeable
+    const float drift_before = ndvis::compute_orthogonality_drift(matrix, dimension);
+    assert(drift_before > 0.05f);
+
+    // Re-orthonormalize
+    ndvis::reorthonormalize(matrix, dimension);
+
+    // Drift should be minimal after QR
+    const float drift_after = ndvis::compute_orthogonality_drift(matrix, dimension);
+    assert(drift_after < 1e-4f);
+
+    // Verify orthonormality
+    for (std::size_t col = 0; col < dimension; ++col) {
+      float norm = 0.0f;
+      for (std::size_t row = 0; row < dimension; ++row) {
+        const float value = matrix[row * dimension + col];
+        norm += value * value;
+      }
+      assert(approx_equal(norm, 1.0f, 1e-3f));
     }
   }
 
