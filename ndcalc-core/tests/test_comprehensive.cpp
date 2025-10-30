@@ -10,6 +10,11 @@
 #include <vector>
 #include <string>
 
+// M_PI is not standard on all platforms (MSVC, strict C++)
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 using namespace ndcalc;
 
 // Helper function for approximate equality

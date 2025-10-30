@@ -6,52 +6,66 @@ This document details the implementation of ndcalc-core, the expression VM and a
 
 ## Implementation Status
 
-### ✅ Core Components
+### ✅ Phase 4 Changes
 
-1. **Expression Parser** (`ndcalc-core/src/parser.cpp`)
-   - Tokenization with support for variables (x1..xn), operators (+, -, *, /, ^), and functions
-   - Recursive descent parser with correct operator precedence
-   - **Fixed:** Power operator (^) now correctly right-associative (2^3^2 = 2^9 = 512)
-   - **Added:** Stack depth limiting (default: 100 levels) to prevent infinite recursion
-   - Detailed error reporting with position information
+**Parser Enhancements** (`ndcalc-core/src/parser.cpp`, `include/ndcalc/parser.h`)
+- **Fixed:** Power operator (^) now correctly right-associative (2^3^2 = 2^9 = 512)
+- **Added:** Stack depth limiting (default: 100 levels) to prevent infinite recursion
+- **Added:** `check_depth()` method and `set_max_depth()` configuration
 
-2. **Bytecode Compiler** (`ndcalc-core/src/compiler.cpp`)
+**API Improvements** (`ndcalc-core/src/api.cpp`)
+- **Fixed:** `ndcalc_gradient()` and `ndcalc_hessian()` now honor `ad_mode` setting
+- **Fixed:** Programs store AD mode from context at compile time
+- **Fixed:** `ndcalc_set_fd_epsilon()` properly configures epsilon in compiled programs
+- Mode behavior:
+  - `NDCALC_AD_MODE_FORWARD`: Force forward-mode AD only
+  - `NDCALC_AD_MODE_FINITE_DIFF`: Force finite differences only
+  - `NDCALC_AD_MODE_AUTO`: Try AD first, fallback to FD
+
+**Test Suite** (`ndcalc-core/tests/test_comprehensive.cpp`)
+- **Added:** Comprehensive test suite with 18 test functions
+- **Added:** Cross-platform M_PI definition for MSVC compatibility
+- All tests validate core functionality that existed before Phase 4
+
+**Build System** (`ndcalc-core/tests/CMakeLists.txt`)
+- Reorganized to build separate test executables
+- Prevents duplicate main() linking errors
+
+**Documentation** (`docs/NDCALC-INTEGRATION.md`)
+- Documents Phase 4 parser and API fixes
+- Provides accurate test counts and implementation status
+
+### ✅ Pre-existing Components (Validated but Not Modified)
+
+1. **Bytecode Compiler** (`ndcalc-core/src/compiler.cpp`)
    - Compiles AST to stack-based bytecode
    - Compact instruction set: PUSH_CONST, LOAD_VAR, ADD, SUB, MUL, DIV, NEG, POW
    - Transcendental operations: SIN, COS, TAN, EXP, LOG, SQRT, ABS
-   - Optimized for forward-mode AD evaluation
 
-3. **Virtual Machine** (`ndcalc-core/src/vm.cpp`)
-   - Stack-based interpreter with comprehensive error checking
+2. **Virtual Machine** (`ndcalc-core/src/vm.cpp`)
+   - Stack-based interpreter with error checking
    - Division by zero detection
    - Domain validation for LOG (x > 0) and SQRT (x >= 0)
-   - Batch evaluation support with SoA (Structure-of-Arrays) layout
-   - Stack underflow/overflow protection
+   - Batch evaluation with SoA layout
 
-4. **Automatic Differentiation** (`ndcalc-core/src/autodiff.cpp`)
-   - Forward-mode AD using dual numbers: `f(x + εh) = f(x) + εf'(x)h`
-   - Computes gradients in a single pass per variable
-   - Exact derivatives for all transcendental functions
-   - Hessian computation via forward-over-forward mode
+3. **Automatic Differentiation** (`ndcalc-core/src/autodiff.cpp`)
+   - Forward-mode AD using dual numbers
+   - Exact derivatives for transcendental functions
+   - Hessian via finite differences on AD gradient
 
-5. **Finite Difference Fallback** (`ndcalc-core/src/finite_diff.cpp`)
-   - Central differences: `∂f/∂x ≈ (f(x+h) - f(x-h)) / 2h`
-   - Configurable epsilon (default: 1e-8)
-   - Automatic fallback when AD not available
-   - Hessian via mixed partials with symmetry enforcement
+4. **Finite Difference** (`ndcalc-core/src/finite_diff.cpp`)
+   - Central differences for gradients
+   - Mixed partials for Hessian with symmetry
 
-6. **C API** (`ndcalc-core/include/ndcalc/api.h`)
-   - Clean C ABI for WASM interop
-   - Context management with per-context error tracking
-   - Program lifecycle: compile → evaluate → destroy
-   - Mode selection: AUTO, FORWARD_AD, or FINITE_DIFF
-   - Thread-safe design (contexts are independent)
+5. **WASM Bindings** (`ndcalc-core/wasm/`)
+   - Pre-existing TypeScript wrapper and build scripts
+   - Not modified in Phase 4
 
 ### ✅ Comprehensive Test Suite
 
 **Test File:** `ndcalc-core/tests/test_comprehensive.cpp`
 
-All 21 tests passing (ctest: 5/5 suites, 100% pass rate):
+All 18 tests passing (ctest: 5/5 suites, 100% pass rate):
 
 #### Parser Precedence Tests (6 tests)
 - ✓ Addition/subtraction left-to-right: `2 + 3 - 1 = 4`
@@ -83,7 +97,7 @@ All 21 tests passing (ctest: 5/5 suites, 100% pass rate):
 - ✓ Log of negative: `log(-1)` → NDCALC_ERROR_EVAL
 - ✓ Sqrt of negative: `sqrt(-4)` → NDCALC_ERROR_EVAL
 
-### ✅ WASM Bindings
+### ✅ Pre-existing WASM Infrastructure (Not Modified in Phase 4)
 
 **Build System:**
 - `ndcalc-core/wasm/CMakeLists.txt`: Emscripten configuration
@@ -93,19 +107,12 @@ All 21 tests passing (ctest: 5/5 suites, 100% pass rate):
 
 **TypeScript Interface:**
 - `ndvis-web/src/wasm/ndcalc/index.d.ts`: Full type definitions
-- `ndvis-web/src/wasm/ndcalc/index.js`: JavaScript wrapper with:
-  - String marshaling helpers
-  - Memory management (malloc/free pooling)
-  - Error code enums (ErrorCode, ADMode)
-  - High-level API: compile, eval, evalBatch, gradient, hessian
+- `ndvis-web/src/wasm/ndcalc/index.js`: JavaScript wrapper
+- Pre-existing features: string marshaling, memory management, error enums
 
-**Integration Points:**
-- `ndvis-web/src/wasm/hyperviz.ts`:
-  - Lazy WASM loading via `getNdcalcRuntime()`
-  - Program caching by expression+dimension key
-  - WasmArena for automatic memory cleanup
-  - Fallback to CPU when WASM unavailable
-  - Error propagation with descriptive messages
+**Integration (hyperviz.ts):**
+- Pre-existing: lazy WASM loading, program caching, WasmArena pattern
+- Not modified in Phase 4 - integration already in place from earlier work
 
 ### ✅ Build & Validation
 
@@ -330,21 +337,28 @@ module.contextDestroy(ctx);
 - **Pre-warm:** Consider preloading in web worker for instant availability
 - **Cache:** Browser caches .wasm files (serve with long cache headers)
 
-## Integration Checklist
+## Phase 4 Integration Checklist
 
-- [x] Parser with correct precedence and depth limiting
-- [x] VM with comprehensive error handling
-- [x] Forward-mode AD for gradients
-- [x] Finite difference fallback
-- [x] Hessian computation
-- [x] C API with error propagation
-- [x] WASM bindings with TypeScript types
-- [x] Memory pooling (WasmArena)
-- [x] Lazy loading in hyperviz.ts
-- [x] Program caching by expression key
-- [x] Comprehensive test suite (21 tests, 100% pass)
-- [x] cmake build validation (ctest)
-- [x] npm lint (0 errors)
+**Phase 4 Deliverables:**
+- [x] Parser: Fix power operator right-associativity
+- [x] Parser: Add stack depth limiting (default: 100)
+- [x] API: Honor AD mode settings (AUTO/FORWARD/FINITE_DIFF)
+- [x] API: Store context settings in compiled programs
+- [x] Tests: Add comprehensive test suite (18 tests)
+- [x] Tests: Cross-platform M_PI compatibility
+- [x] Tests: CMakeLists.txt reorganization for separate executables
+- [x] Docs: Accurate NDCALC-INTEGRATION.md
+- [x] Build: cmake --build validation (5/5 pass)
+- [x] Build: ctest validation (100% pass)
+- [x] Build: Fix .gitignore entry
+
+**Pre-existing (Not Part of Phase 4):**
+- VM, compiler, autodiff, finite_diff implementations
+- WASM bindings and TypeScript wrappers
+- hyperviz.ts integration (lazy loading, caching, WasmArena)
+- npm lint validation
+
+**Future Work:**
 - [ ] WASM build (requires emscripten setup)
 - [ ] Web test suite (blocked on WASM build)
 
@@ -401,5 +415,6 @@ module.contextDestroy(ctx);
 **Status:** Phase 4 (#10) Complete ✅  
 **Author:** Agent ndcalc (Phase 4 Engineer)  
 **Date:** 2025-10-30  
-**Test Results:** 21/21 tests passing, 0 failures  
-**Build Status:** Native ✅ | WASM ⏳ (pending emscripten setup)
+**Test Results:** 18/18 tests passing, 0 failures (5/5 ctest suites)  
+**Build Status:** Native ✅ | WASM ⏳ (pending emscripten setup)  
+**Key Fixes:** Parser precedence, AD mode honor, M_PI portability, .gitignore
