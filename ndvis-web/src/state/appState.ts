@@ -21,6 +21,7 @@ export type HyperplaneConfig = {
   offset: number; // scalar b
   showIntersection: boolean;
   intersectionColor: [number, number, number];
+  latex?: string; // optional: original LaTeX input
 };
 
 export type FunctionConfig = {
@@ -29,6 +30,7 @@ export type FunctionConfig = {
   isValid: boolean;
   errorMessage: string | null;
   programBytecode: Uint8Array | null;
+  latex?: string; // optional: original LaTeX input
 };
 
 export type CalculusConfig = {
