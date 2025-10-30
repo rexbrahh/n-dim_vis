@@ -1,6 +1,9 @@
 import { computePcaFallback, type PcaWorkspace, createBindings } from "@/wasm/ndvis";
 import { create } from "zustand";
 
+const MAX_DIMENSION = 12;
+const MAX_VERTICES = 150000;
+
 export type ProjectionBasis = "standard" | "random" | "pca" | "custom";
 
 export type PcaInsight = {
@@ -412,9 +415,6 @@ export const useAppState = create<AppState>((set, get) => ({
 }));
 
 // --- helpers ----------------------------------------------------------------
-
-const MAX_DIMENSION = 12;
-const MAX_VERTICES = 150000;
 
 export function generateHypercubeGeometry(dimension: number): GeometryState {
   const cappedDimension = Math.min(dimension, MAX_DIMENSION);
