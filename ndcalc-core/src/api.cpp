@@ -219,7 +219,7 @@ ndcalc_error_t ndcalc_hessian(
     }
 }
 
-// Configuration
+// Context-level configuration (affects new compilations)
 void ndcalc_set_ad_mode(ndcalc_context_handle ctx, ndcalc_ad_mode_t mode) {
     if (ctx) {
         ctx->ad_mode = mode;
@@ -229,6 +229,19 @@ void ndcalc_set_ad_mode(ndcalc_context_handle ctx, ndcalc_ad_mode_t mode) {
 void ndcalc_set_fd_epsilon(ndcalc_context_handle ctx, double epsilon) {
     if (ctx) {
         ctx->fd_epsilon = epsilon;
+    }
+}
+
+// Program-level configuration (runtime, affects existing programs)
+void ndcalc_program_set_ad_mode(ndcalc_program_handle program, ndcalc_ad_mode_t mode) {
+    if (program) {
+        program->ad_mode = mode;
+    }
+}
+
+void ndcalc_program_set_fd_epsilon(ndcalc_program_handle program, double epsilon) {
+    if (program) {
+        program->finite_diff.set_epsilon(epsilon);
     }
 }
 

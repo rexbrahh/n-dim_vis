@@ -289,14 +289,14 @@ void test_gradient_vs_finite_diff() {
     double point[] = {1.0, 0.5, 2.0};
     double grad_ad[3], grad_fd[3];
     
-    // Get AD gradient
-    ndcalc_set_ad_mode(ctx, NDCALC_AD_MODE_FORWARD);
+    // Get AD gradient using program-level setter
+    ndcalc_program_set_ad_mode(program, NDCALC_AD_MODE_FORWARD);
     err = ndcalc_gradient(program, point, 3, grad_ad);
     assert(err == NDCALC_OK);
     
-    // Get FD gradient
-    ndcalc_set_ad_mode(ctx, NDCALC_AD_MODE_FINITE_DIFF);
-    ndcalc_set_fd_epsilon(ctx, 1e-8);
+    // Get FD gradient using program-level setters
+    ndcalc_program_set_ad_mode(program, NDCALC_AD_MODE_FINITE_DIFF);
+    ndcalc_program_set_fd_epsilon(program, 1e-8);
     err = ndcalc_gradient(program, point, 3, grad_fd);
     assert(err == NDCALC_OK);
     
@@ -308,6 +308,49 @@ void test_gradient_vs_finite_diff() {
     std::cout << "✓ AD gradient matches FD gradient\n";
     std::cout << "  AD: (" << grad_ad[0] << ", " << grad_ad[1] << ", " << grad_ad[2] << ")\n";
     std::cout << "  FD: (" << grad_fd[0] << ", " << grad_fd[1] << ", " << grad_fd[2] << ")\n";
+    
+    ndcalc_program_destroy(program);
+    ndcalc_context_destroy(ctx);
+}
+
+void test_ad_mode_forced() {
+    std::cout << "Testing: Forced AD modes (FORWARD and FINITE_DIFF)\n";
+    
+    auto ctx = ndcalc_context_create();
+    const char* var_names[] = {"x", "y"};
+    ndcalc_program_handle program;
+    auto err = ndcalc_compile(ctx, "x^2 + y^2", 2, var_names, &program);
+    assert(err == NDCALC_OK);
+    
+    double point[] = {3.0, 4.0};
+    double gradient[2];
+    
+    // Test FORWARD mode (should succeed for simple expressions)
+    ndcalc_program_set_ad_mode(program, NDCALC_AD_MODE_FORWARD);
+    err = ndcalc_gradient(program, point, 2, gradient);
+    assert(err == NDCALC_OK);
+    assert(approx_equal(gradient[0], 6.0));
+    assert(approx_equal(gradient[1], 8.0));
+    std::cout << "  ✓ FORWARD mode: gradient = (" << gradient[0] << ", " << gradient[1] << ")\n";
+    
+    // Test FINITE_DIFF mode (should also succeed)
+    ndcalc_program_set_ad_mode(program, NDCALC_AD_MODE_FINITE_DIFF);
+    ndcalc_program_set_fd_epsilon(program, 1e-8);
+    err = ndcalc_gradient(program, point, 2, gradient);
+    assert(err == NDCALC_OK);
+    assert(approx_equal(gradient[0], 6.0, 1e-6));
+    assert(approx_equal(gradient[1], 8.0, 1e-6));
+    std::cout << "  ✓ FINITE_DIFF mode: gradient = (" << gradient[0] << ", " << gradient[1] << ")\n";
+    
+    // Test AUTO mode (should use AD and succeed)
+    ndcalc_program_set_ad_mode(program, NDCALC_AD_MODE_AUTO);
+    err = ndcalc_gradient(program, point, 2, gradient);
+    assert(err == NDCALC_OK);
+    assert(approx_equal(gradient[0], 6.0));
+    assert(approx_equal(gradient[1], 8.0));
+    std::cout << "  ✓ AUTO mode: gradient = (" << gradient[0] << ", " << gradient[1] << ")\n";
+    
+    std::cout << "✓ All AD modes work correctly\n";
     
     ndcalc_program_destroy(program);
     ndcalc_context_destroy(ctx);
@@ -500,6 +543,7 @@ int main() {
     std::cout << "\n--- Gradient Tests ---\n";
     test_gradient_polynomial();
     test_gradient_vs_finite_diff();
+    test_ad_mode_forced();
     
     std::cout << "\n--- Hessian Tests ---\n";
     test_hessian_quadratic();

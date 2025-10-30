@@ -13,19 +13,22 @@ This document details the implementation of ndcalc-core, the expression VM and a
 - **Added:** Stack depth limiting (default: 100 levels) to prevent infinite recursion
 - **Added:** `check_depth()` method and `set_max_depth()` configuration
 
-**API Improvements** (`ndcalc-core/src/api.cpp`)
-- **Fixed:** `ndcalc_gradient()` and `ndcalc_hessian()` now honor `ad_mode` setting
-- **Fixed:** Programs store AD mode from context at compile time
-- **Fixed:** `ndcalc_set_fd_epsilon()` properly configures epsilon in compiled programs
+**API Improvements** (`ndcalc-core/src/api.cpp`, `include/ndcalc/api.h`)
+- **Added:** `ndcalc_program_set_ad_mode()` - runtime configuration for compiled programs
+- **Added:** `ndcalc_program_set_fd_epsilon()` - runtime epsilon tuning
+- **Fixed:** `ndcalc_gradient()` and `ndcalc_hessian()` now honor program's `ad_mode`
+- **Design:** Context setters affect new compilations; program setters affect existing programs
 - Mode behavior:
-  - `NDCALC_AD_MODE_FORWARD`: Force forward-mode AD only
-  - `NDCALC_AD_MODE_FINITE_DIFF`: Force finite differences only
-  - `NDCALC_AD_MODE_AUTO`: Try AD first, fallback to FD
+  - `NDCALC_AD_MODE_FORWARD`: Force forward-mode AD only (fails if AD unavailable)
+  - `NDCALC_AD_MODE_FINITE_DIFF`: Force finite differences only (fails if FD unavailable)
+  - `NDCALC_AD_MODE_AUTO`: Try AD first, fallback to FD on failure (default)
 
 **Test Suite** (`ndcalc-core/tests/test_comprehensive.cpp`)
-- **Added:** Comprehensive test suite with 18 test functions
+- **Added:** Comprehensive test suite with 19 test functions
 - **Added:** Cross-platform M_PI definition for MSVC compatibility
-- All tests validate core functionality that existed before Phase 4
+- **Added:** `test_ad_mode_forced()` to verify all three AD modes work
+- **Fixed:** `test_gradient_vs_finite_diff()` uses program-level setters
+- All tests validate that both AD and FD paths are exercised
 
 **Build System** (`ndcalc-core/tests/CMakeLists.txt`)
 - Reorganized to build separate test executables
@@ -65,7 +68,7 @@ This document details the implementation of ndcalc-core, the expression VM and a
 
 **Test File:** `ndcalc-core/tests/test_comprehensive.cpp`
 
-All 18 tests passing (ctest: 5/5 suites, 100% pass rate):
+All 19 tests passing (ctest: 5/5 suites, 100% pass rate):
 
 #### Parser Precedence Tests (6 tests)
 - ✓ Addition/subtraction left-to-right: `2 + 3 - 1 = 4`
@@ -81,9 +84,10 @@ All 18 tests passing (ctest: 5/5 suites, 100% pass rate):
 - ✓ `sqrt(x²) = |x|` (validated at 5 points, including negatives)
 - ✓ `tan(x) = sin(x) / cos(x)` (validated at 4 points)
 
-#### Gradient Accuracy (2 tests)
+#### Gradient Accuracy (3 tests)
 - ✓ Polynomial gradient: `∇(x²+y²) = (2x, 2y)` at (3,4) → (6, 8)
 - ✓ AD vs FD agreement: `sin(x)*exp(y)+z²` within 1e-5 tolerance
+- ✓ Forced AD modes: FORWARD, FINITE_DIFF, and AUTO all produce correct results
 
 #### Hessian Validation (2 tests)
 - ✓ Quadratic Hessian: `∇²(x²+y²+z²) = diag(2,2,2)`
@@ -194,9 +198,13 @@ ndcalc_error_t ndcalc_hessian(
     double* hessian_out  // row-major, size = num_inputs²
 );
 
-// Configuration
+// Configuration (context-level, affects new compilations)
 void ndcalc_set_ad_mode(ndcalc_context_handle ctx, ndcalc_ad_mode_t mode);
 void ndcalc_set_fd_epsilon(ndcalc_context_handle ctx, double epsilon);
+
+// Configuration (program-level, runtime, affects existing programs)
+void ndcalc_program_set_ad_mode(ndcalc_program_handle program, ndcalc_ad_mode_t mode);
+void ndcalc_program_set_fd_epsilon(ndcalc_program_handle program, double epsilon);
 
 // Error Handling
 const char* ndcalc_error_string(ndcalc_error_t error);
@@ -343,9 +351,10 @@ module.contextDestroy(ctx);
 - [x] Parser: Fix power operator right-associativity
 - [x] Parser: Add stack depth limiting (default: 100)
 - [x] API: Honor AD mode settings (AUTO/FORWARD/FINITE_DIFF)
-- [x] API: Store context settings in compiled programs
-- [x] Tests: Add comprehensive test suite (18 tests)
+- [x] API: Program-level runtime configuration (set_ad_mode, set_fd_epsilon)
+- [x] Tests: Add comprehensive test suite (19 tests)
 - [x] Tests: Cross-platform M_PI compatibility
+- [x] Tests: Verify both AD and FD paths are exercised
 - [x] Tests: CMakeLists.txt reorganization for separate executables
 - [x] Docs: Accurate NDCALC-INTEGRATION.md
 - [x] Build: cmake --build validation (5/5 pass)
@@ -415,6 +424,6 @@ module.contextDestroy(ctx);
 **Status:** Phase 4 (#10) Complete ✅  
 **Author:** Agent ndcalc (Phase 4 Engineer)  
 **Date:** 2025-10-30  
-**Test Results:** 18/18 tests passing, 0 failures (5/5 ctest suites)  
+**Test Results:** 19/19 tests passing, 0 failures (5/5 ctest suites)  
 **Build Status:** Native ✅ | WASM ⏳ (pending emscripten setup)  
-**Key Fixes:** Parser precedence, AD mode honor, M_PI portability, .gitignore
+**Key Features:** Parser precedence, runtime AD mode control, forced mode testing
