@@ -98,7 +98,7 @@ std::unique_ptr<ASTNode> Parser::parse(const std::string& expression,
     }
 
     size_t pos = 0;
-    auto result = parse_expression(pos);
+    auto result = parse_expression(pos, 0);
 
     if (result && tokens_[pos].type != TokenType::END) {
         error_message_ = "Unexpected tokens after expression";
@@ -108,8 +108,18 @@ std::unique_ptr<ASTNode> Parser::parse(const std::string& expression,
     return result;
 }
 
-std::unique_ptr<ASTNode> Parser::parse_expression(size_t& pos) {
-    auto left = parse_term(pos);
+bool Parser::check_depth(size_t depth) {
+    if (depth >= max_depth_) {
+        error_message_ = "Expression too deeply nested (max depth: " + std::to_string(max_depth_) + ")";
+        return false;
+    }
+    return true;
+}
+
+std::unique_ptr<ASTNode> Parser::parse_expression(size_t& pos, size_t depth) {
+    if (!check_depth(depth)) return nullptr;
+    
+    auto left = parse_term(pos, depth + 1);
     if (!left) return nullptr;
 
     while (pos < tokens_.size() && tokens_[pos].type == TokenType::OPERATOR &&
@@ -117,7 +127,7 @@ std::unique_ptr<ASTNode> Parser::parse_expression(size_t& pos) {
         std::string op = tokens_[pos].value;
         ++pos;
 
-        auto right = parse_term(pos);
+        auto right = parse_term(pos, depth + 1);
         if (!right) return nullptr;
 
         auto node = std::make_unique<ASTNode>(ASTNodeType::BINARY_OP, op);
@@ -129,8 +139,10 @@ std::unique_ptr<ASTNode> Parser::parse_expression(size_t& pos) {
     return left;
 }
 
-std::unique_ptr<ASTNode> Parser::parse_term(size_t& pos) {
-    auto left = parse_factor(pos);
+std::unique_ptr<ASTNode> Parser::parse_term(size_t& pos, size_t depth) {
+    if (!check_depth(depth)) return nullptr;
+    
+    auto left = parse_factor(pos, depth + 1);
     if (!left) return nullptr;
 
     while (pos < tokens_.size() && tokens_[pos].type == TokenType::OPERATOR &&
@@ -138,7 +150,7 @@ std::unique_ptr<ASTNode> Parser::parse_term(size_t& pos) {
         std::string op = tokens_[pos].value;
         ++pos;
 
-        auto right = parse_factor(pos);
+        auto right = parse_factor(pos, depth + 1);
         if (!right) return nullptr;
 
         auto node = std::make_unique<ASTNode>(ASTNodeType::BINARY_OP, op);
@@ -150,27 +162,32 @@ std::unique_ptr<ASTNode> Parser::parse_term(size_t& pos) {
     return left;
 }
 
-std::unique_ptr<ASTNode> Parser::parse_factor(size_t& pos) {
-    auto left = parse_primary(pos);
+std::unique_ptr<ASTNode> Parser::parse_factor(size_t& pos, size_t depth) {
+    if (!check_depth(depth)) return nullptr;
+    
+    auto left = parse_primary(pos, depth + 1);
     if (!left) return nullptr;
 
-    while (pos < tokens_.size() && tokens_[pos].type == TokenType::OPERATOR &&
-           tokens_[pos].value == "^") {
+    // Right-associative: x^y^z = x^(y^z)
+    if (pos < tokens_.size() && tokens_[pos].type == TokenType::OPERATOR &&
+        tokens_[pos].value == "^") {
         ++pos;
 
-        auto right = parse_primary(pos);
+        auto right = parse_factor(pos, depth + 1);  // Recursive for right-associativity
         if (!right) return nullptr;
 
         auto node = std::make_unique<ASTNode>(ASTNodeType::BINARY_OP, "^");
         node->children.push_back(std::move(left));
         node->children.push_back(std::move(right));
-        left = std::move(node);
+        return node;
     }
 
     return left;
 }
 
-std::unique_ptr<ASTNode> Parser::parse_primary(size_t& pos) {
+std::unique_ptr<ASTNode> Parser::parse_primary(size_t& pos, size_t depth) {
+    if (!check_depth(depth)) return nullptr;
+    
     if (pos >= tokens_.size()) {
         error_message_ = "Unexpected end of expression";
         return nullptr;
@@ -179,7 +196,7 @@ std::unique_ptr<ASTNode> Parser::parse_primary(size_t& pos) {
     // Unary minus
     if (tokens_[pos].type == TokenType::OPERATOR && tokens_[pos].value == "-") {
         ++pos;
-        auto operand = parse_primary(pos);
+        auto operand = parse_primary(pos, depth + 1);
         if (!operand) return nullptr;
 
         auto node = std::make_unique<ASTNode>(ASTNodeType::UNARY_OP, "-");
@@ -190,7 +207,7 @@ std::unique_ptr<ASTNode> Parser::parse_primary(size_t& pos) {
     // Unary plus
     if (tokens_[pos].type == TokenType::OPERATOR && tokens_[pos].value == "+") {
         ++pos;
-        return parse_primary(pos);
+        return parse_primary(pos, depth + 1);
     }
 
     // Numbers
@@ -229,7 +246,7 @@ std::unique_ptr<ASTNode> Parser::parse_primary(size_t& pos) {
         // Parse arguments
         if (tokens_[pos].type != TokenType::RPAREN) {
             while (true) {
-                auto arg = parse_expression(pos);
+                auto arg = parse_expression(pos, depth + 1);
                 if (!arg) return nullptr;
                 node->children.push_back(std::move(arg));
 
@@ -251,7 +268,7 @@ std::unique_ptr<ASTNode> Parser::parse_primary(size_t& pos) {
     // Parenthesized expression
     if (tokens_[pos].type == TokenType::LPAREN) {
         ++pos;
-        auto node = parse_expression(pos);
+        auto node = parse_expression(pos, depth + 1);
         if (!node) return nullptr;
 
         if (pos >= tokens_.size() || tokens_[pos].type != TokenType::RPAREN) {
