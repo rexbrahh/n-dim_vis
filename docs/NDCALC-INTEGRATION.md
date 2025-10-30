@@ -63,8 +63,9 @@ This document details the implementation of ndcalc-core, the expression VM and a
    - Mixed partials for Hessian with symmetry
 
 5. **WASM Bindings** (`ndcalc-core/wasm/`)
-   - Pre-existing TypeScript wrapper and build scripts
-   - Not modified in Phase 4
+   - **Modified:** `wasm_bindings.cpp` - Added `wasm_program_set_ad_mode()` and `wasm_program_set_fd_epsilon()` exports
+   - **Modified:** `CMakeLists.txt` - Added new functions to `EXPORTED_FUNCTIONS` list
+   - Pre-existing: TypeScript wrapper and build scripts remain unchanged
 
 ### ✅ Comprehensive Test Suite
 
@@ -103,22 +104,23 @@ All 19 tests passing (ctest: 5/5 suites, 100% pass rate):
 - ✓ Log of negative: `log(-1)` → NDCALC_ERROR_EVAL
 - ✓ Sqrt of negative: `sqrt(-4)` → NDCALC_ERROR_EVAL
 
-### ✅ Pre-existing WASM Infrastructure (Not Modified in Phase 4)
+### ✅ WASM Integration (Modified in Phase 4)
 
 **Build System:**
-- `ndcalc-core/wasm/CMakeLists.txt`: Emscripten configuration
-- `ndcalc-core/wasm/build.sh`: Automated build script
-- `ndcalc-core/wasm/wasm_bindings.cpp`: C API exports with EMSCRIPTEN_KEEPALIVE
-- `ndcalc-core/wasm/generate-types.js`: TypeScript declaration generator
+- `ndcalc-core/wasm/CMakeLists.txt`: **Modified** - Added `wasm_program_set_ad_mode` and `wasm_program_set_fd_epsilon` to `EXPORTED_FUNCTIONS`
+- `ndcalc-core/wasm/build.sh`: Automated build script (unchanged)
+- `ndcalc-core/wasm/wasm_bindings.cpp`: **Modified** - Added program-level setter exports with `EMSCRIPTEN_KEEPALIVE`
+- `ndcalc-core/wasm/generate-types.js`: TypeScript declaration generator (unchanged)
 
 **TypeScript Interface:**
-- `ndvis-web/src/wasm/ndcalc/index.d.ts`: Full type definitions
-- `ndvis-web/src/wasm/ndcalc/index.js`: JavaScript wrapper
-- Pre-existing features: string marshaling, memory management, error enums
+- `ndvis-web/src/wasm/ndcalc/index.d.ts`: **Modified** - Added `programSetADMode()` and `programSetFDEpsilon()` method signatures
+- `ndvis-web/src/wasm/ndcalc/index.js`: **Modified** - Implemented program-level setter wrapper methods
+- Pre-existing features: string marshaling, memory management, error enums (unchanged)
 
 **Integration (hyperviz.ts):**
-- Pre-existing: lazy WASM loading, program caching, WasmArena pattern
-- Not modified in Phase 4 - integration already in place from earlier work
+- **Modified:** Added `ensureProgramAdMode()` helper to configure cached programs at runtime
+- **Modified:** Program setters called before gradient/hessian evaluation
+- Pre-existing: lazy WASM loading, program caching, WasmArena pattern (unchanged)
 
 ### ✅ Build & Validation
 
@@ -366,10 +368,9 @@ module.contextDestroy(ctx);
 - [x] Build: ctest validation (100% pass)
 - [x] Build: Fix .gitignore entry
 
-**Pre-existing (Not Part of Phase 4):**
-- VM, compiler, autodiff, finite_diff implementations
-- WASM bindings and TypeScript wrappers
-- hyperviz.ts integration (lazy loading, caching, WasmArena)
+**Pre-existing (Validated but Not Modified):**
+- VM, compiler, autodiff, finite_diff core implementations
+- WASM build system and infrastructure
 - npm lint validation
 
 **Future Work:**
