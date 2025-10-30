@@ -17,3 +17,5 @@ ndcalc-core/wasm/dist/
 # Misc
 .DS_Store
 build-web/
+
+.worktrees/
