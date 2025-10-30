@@ -219,9 +219,15 @@ class NdcalcWrapper {
 export default async function createNdcalcModule() {
   const wasmBase = "/wasm/";
   const cacheBuster = import.meta.env?.DEV ? `?dev=${Date.now()}` : "";
+  const scriptUrl = new URL("./ndcalc_wasm.js", import.meta.url).href;
   const module = await createNdcalcModuleRaw({
-    locateFile: (file) => `${wasmBase}${file}`,
-    mainScriptUrlOrBlob: `${wasmBase}ndcalc_wasm.js${cacheBuster}`,
+    locateFile: (file) => {
+      if (file.endsWith(".wasm")) {
+        return `${wasmBase}${file}${cacheBuster}`;
+      }
+      return new URL(`./ndcalc/${file}`, import.meta.url).href;
+    },
+    mainScriptUrlOrBlob: scriptUrl,
   });
   return new NdcalcWrapper(module);
 }

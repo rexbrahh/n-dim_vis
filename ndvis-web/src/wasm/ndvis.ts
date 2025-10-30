@@ -50,6 +50,7 @@ const copyHeapToArray = (module: NdvisModule, ptr: number, target: Float32Array)
 };
 
 const textEncoder = new TextEncoder();
+const usePthreads = import.meta.env?.VITE_NDVIS_USE_PTHREADS === "1";
 
 const ensureUtf8Helpers = (module: NdvisModule) => {
   const mutableModule = module as NdvisModule & {
@@ -143,7 +144,7 @@ export const loadNdvis: WasmLoader = async () => {
   if (!modulePromise) {
     modulePromise = (async () => {
       const isolated = typeof crossOriginIsolated === "boolean" ? crossOriginIsolated : true;
-      if (!isolated) {
+      if (usePthreads && !isolated) {
         if (import.meta.env.DEV) {
           console.warn(
             "SharedArrayBuffer requires cross-origin isolation (COOP/COEP). Falling back to stub ndvis module."
@@ -154,13 +155,22 @@ export const loadNdvis: WasmLoader = async () => {
       try {
         const wasmBase = "/wasm/";
         const cacheBuster = import.meta.env.DEV ? `?dev=${Date.now()}` : "";
+        const scriptUrl = new URL("./ndvis-wasm.js", import.meta.url).href;
         const moduleOptions: Record<string, unknown> = {
-          locateFile: (file: string) => `${wasmBase}${file}`,
-          mainScriptUrlOrBlob: `${wasmBase}ndvis-wasm.js${cacheBuster}`,
+          locateFile: (file: string) => {
+            if (file.endsWith(".wasm")) {
+              return `${wasmBase}${file}${cacheBuster}`;
+            }
+            return new URL(`./${file}`, import.meta.url).href;
+          },
+          mainScriptUrlOrBlob: scriptUrl,
           onAbort: (what: unknown) => {
             console.error("ndvis wasm aborted", what);
           },
         };
+        if (usePthreads) {
+          moduleOptions.worker = true;
+        }
         const instance = await createNdvisModuleRaw(moduleOptions);
         ensureUtf8Helpers(instance as NdvisModule);
         return instance as NdvisModule;
