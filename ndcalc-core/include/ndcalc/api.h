@@ -81,6 +81,10 @@ typedef enum {
 void ndcalc_set_ad_mode(ndcalc_context_handle ctx, ndcalc_ad_mode_t mode);
 void ndcalc_set_fd_epsilon(ndcalc_context_handle ctx, double epsilon);
 
+// Program-level configuration (runtime, affects already-compiled programs)
+void ndcalc_program_set_ad_mode(ndcalc_program_handle program, ndcalc_ad_mode_t mode);
+void ndcalc_program_set_fd_epsilon(ndcalc_program_handle program, double epsilon);
+
 // Error handling
 const char* ndcalc_error_string(ndcalc_error_t error);
 const char* ndcalc_get_last_error_message(ndcalc_context_handle ctx);

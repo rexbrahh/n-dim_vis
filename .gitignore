@@ -19,3 +19,5 @@ ndcalc-core/wasm/dist/
 build-web/
 
 .worktrees/
+ndcalc-core/.cache/
+ndcalc-core/build/

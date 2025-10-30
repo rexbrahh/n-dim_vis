@@ -205,6 +205,14 @@ class NdcalcWrapper {
     this.module.ccall('wasm_set_fd_epsilon', null, ['number', 'number'], [ctx, epsilon]);
   }
 
+  programSetADMode(program, mode) {
+    this.module.ccall('wasm_program_set_ad_mode', null, ['number', 'number'], [program, mode]);
+  }
+
+  programSetFDEpsilon(program, epsilon) {
+    this.module.ccall('wasm_program_set_fd_epsilon', null, ['number', 'number'], [program, epsilon]);
+  }
+
   errorString(error) {
     const ptr = this.module.ccall('wasm_error_string', 'number', ['number'], [error]);
     return this.module.UTF8ToString(ptr);

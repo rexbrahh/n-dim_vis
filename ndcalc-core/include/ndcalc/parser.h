@@ -54,16 +54,22 @@ public:
     // Get error message if parsing failed
     const std::string& get_error() const { return error_message_; }
 
+    // Set maximum recursion depth (default: 100)
+    void set_max_depth(size_t depth) { max_depth_ = depth; }
+
 private:
     std::vector<Token> tokenize(const std::string& expression);
-    std::unique_ptr<ASTNode> parse_expression(size_t& pos);
-    std::unique_ptr<ASTNode> parse_term(size_t& pos);
-    std::unique_ptr<ASTNode> parse_factor(size_t& pos);
-    std::unique_ptr<ASTNode> parse_primary(size_t& pos);
+    std::unique_ptr<ASTNode> parse_expression(size_t& pos, size_t depth = 0);
+    std::unique_ptr<ASTNode> parse_term(size_t& pos, size_t depth = 0);
+    std::unique_ptr<ASTNode> parse_factor(size_t& pos, size_t depth = 0);
+    std::unique_ptr<ASTNode> parse_primary(size_t& pos, size_t depth = 0);
+    
+    bool check_depth(size_t depth);
 
     std::vector<Token> tokens_;
     std::unordered_map<std::string, size_t> variable_indices_;
     std::string error_message_;
+    size_t max_depth_ = 100;
 };
 
 } // namespace ndcalc

@@ -23,8 +23,9 @@ struct ndcalc_program_t {
     ndcalc::VM vm;
     ndcalc::AutoDiff autodiff;
     ndcalc::FiniteDiff finite_diff;
+    ndcalc_ad_mode_t ad_mode;
 
-    ndcalc_program_t() : finite_diff(1e-8) {}
+    ndcalc_program_t() : finite_diff(1e-8), ad_mode(NDCALC_AD_MODE_AUTO) {}
 };
 
 // Context management
@@ -73,10 +74,11 @@ ndcalc_error_t ndcalc_compile(
 
         bytecode->set_num_variables(num_variables);
 
-        // Create program
+        // Create program with context settings
         auto program = new ndcalc_program_t();
         program->bytecode = std::move(bytecode);
         program->finite_diff.set_epsilon(ctx->fd_epsilon);
+        program->ad_mode = ctx->ad_mode;
 
         *out_program = program;
         return NDCALC_OK;
@@ -140,19 +142,37 @@ ndcalc_error_t ndcalc_gradient(
         return NDCALC_ERROR_NULL_POINTER;
     }
 
-    // Try automatic differentiation first
-    if (program->autodiff.compute_gradient(*program->bytecode, inputs,
-                                            num_inputs, gradient_out)) {
-        return NDCALC_OK;
-    }
+    // Honor AD mode setting
+    switch (program->ad_mode) {
+        case NDCALC_AD_MODE_FORWARD:
+            // Force forward-mode AD
+            if (program->autodiff.compute_gradient(*program->bytecode, inputs,
+                                                    num_inputs, gradient_out)) {
+                return NDCALC_OK;
+            }
+            return NDCALC_ERROR_EVAL;
 
-    // Fallback to finite differences
-    if (program->finite_diff.compute_gradient(*program->bytecode, program->vm,
-                                               inputs, num_inputs, gradient_out)) {
-        return NDCALC_OK;
-    }
+        case NDCALC_AD_MODE_FINITE_DIFF:
+            // Force finite differences
+            if (program->finite_diff.compute_gradient(*program->bytecode, program->vm,
+                                                       inputs, num_inputs, gradient_out)) {
+                return NDCALC_OK;
+            }
+            return NDCALC_ERROR_EVAL;
 
-    return NDCALC_ERROR_EVAL;
+        case NDCALC_AD_MODE_AUTO:
+        default:
+            // Try AD first, fallback to FD
+            if (program->autodiff.compute_gradient(*program->bytecode, inputs,
+                                                    num_inputs, gradient_out)) {
+                return NDCALC_OK;
+            }
+            if (program->finite_diff.compute_gradient(*program->bytecode, program->vm,
+                                                       inputs, num_inputs, gradient_out)) {
+                return NDCALC_OK;
+            }
+            return NDCALC_ERROR_EVAL;
+    }
 }
 
 // Hessian computation
@@ -166,22 +186,40 @@ ndcalc_error_t ndcalc_hessian(
         return NDCALC_ERROR_NULL_POINTER;
     }
 
-    // Try automatic differentiation first
-    if (program->autodiff.compute_hessian(*program->bytecode, inputs,
-                                           num_inputs, hessian_out)) {
-        return NDCALC_OK;
-    }
+    // Honor AD mode setting
+    switch (program->ad_mode) {
+        case NDCALC_AD_MODE_FORWARD:
+            // Force forward-mode AD (uses FD on gradient)
+            if (program->autodiff.compute_hessian(*program->bytecode, inputs,
+                                                   num_inputs, hessian_out)) {
+                return NDCALC_OK;
+            }
+            return NDCALC_ERROR_EVAL;
 
-    // Fallback to finite differences
-    if (program->finite_diff.compute_hessian(*program->bytecode, program->vm,
-                                              inputs, num_inputs, hessian_out)) {
-        return NDCALC_OK;
-    }
+        case NDCALC_AD_MODE_FINITE_DIFF:
+            // Force finite differences
+            if (program->finite_diff.compute_hessian(*program->bytecode, program->vm,
+                                                      inputs, num_inputs, hessian_out)) {
+                return NDCALC_OK;
+            }
+            return NDCALC_ERROR_EVAL;
 
-    return NDCALC_ERROR_EVAL;
+        case NDCALC_AD_MODE_AUTO:
+        default:
+            // Try AD first, fallback to FD
+            if (program->autodiff.compute_hessian(*program->bytecode, inputs,
+                                                   num_inputs, hessian_out)) {
+                return NDCALC_OK;
+            }
+            if (program->finite_diff.compute_hessian(*program->bytecode, program->vm,
+                                                      inputs, num_inputs, hessian_out)) {
+                return NDCALC_OK;
+            }
+            return NDCALC_ERROR_EVAL;
+    }
 }
 
-// Configuration
+// Context-level configuration (affects new compilations)
 void ndcalc_set_ad_mode(ndcalc_context_handle ctx, ndcalc_ad_mode_t mode) {
     if (ctx) {
         ctx->ad_mode = mode;
@@ -191,6 +229,19 @@ void ndcalc_set_ad_mode(ndcalc_context_handle ctx, ndcalc_ad_mode_t mode) {
 void ndcalc_set_fd_epsilon(ndcalc_context_handle ctx, double epsilon) {
     if (ctx) {
         ctx->fd_epsilon = epsilon;
+    }
+}
+
+// Program-level configuration (runtime, affects existing programs)
+void ndcalc_program_set_ad_mode(ndcalc_program_handle program, ndcalc_ad_mode_t mode) {
+    if (program) {
+        program->ad_mode = mode;
+    }
+}
+
+void ndcalc_program_set_fd_epsilon(ndcalc_program_handle program, double epsilon) {
+    if (program) {
+        program->finite_diff.set_epsilon(epsilon);
     }
 }
 

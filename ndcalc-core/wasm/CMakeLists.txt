@@ -23,7 +23,7 @@ set_target_properties(ndcalc_wasm PROPERTIES
     SUFFIX ".js"
     LINK_FLAGS "\
         -s WASM=1 \
-        -s EXPORTED_FUNCTIONS='[\"_malloc\",\"_free\",\"_wasm_context_create\",\"_wasm_context_destroy\",\"_wasm_compile\",\"_wasm_program_destroy\",\"_wasm_eval\",\"_wasm_eval_batch\",\"_wasm_gradient\",\"_wasm_hessian\",\"_wasm_set_ad_mode\",\"_wasm_set_fd_epsilon\",\"_wasm_error_string\",\"_wasm_get_last_error_message\"]' \
+        -s EXPORTED_FUNCTIONS='[\"_malloc\",\"_free\",\"_wasm_context_create\",\"_wasm_context_destroy\",\"_wasm_compile\",\"_wasm_program_destroy\",\"_wasm_eval\",\"_wasm_eval_batch\",\"_wasm_gradient\",\"_wasm_hessian\",\"_wasm_set_ad_mode\",\"_wasm_set_fd_epsilon\",\"_wasm_program_set_ad_mode\",\"_wasm_program_set_fd_epsilon\",\"_wasm_error_string\",\"_wasm_get_last_error_message\"]' \
         -s EXPORTED_RUNTIME_METHODS='[\"ccall\",\"cwrap\",\"getValue\",\"setValue\"]' \
         -s ALLOW_MEMORY_GROWTH=1 \
         -s DISABLE_EXCEPTION_CATCHING=0 \
