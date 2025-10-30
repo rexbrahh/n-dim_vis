@@ -27,6 +27,8 @@ vi.mock("@/wasm/ndcalc/index.js", () => ({
     evalBatch: () => [0, []],
     setADMode: () => {},
     setFDEpsilon: () => {},
+    programSetADMode: () => {},
+    programSetFDEpsilon: () => {},
     errorString: () => "OK",
     getLastErrorMessage: () => "",
   }),
@@ -65,6 +67,8 @@ type StubModule = {
   evalBatch(program: number, inputArrays: number[][]): [ErrorCode, number[]];
   setADMode(ctx: number, mode: number): void;
   setFDEpsilon(ctx: number, epsilon: number): void;
+  programSetADMode(program: number, mode: number): void;
+  programSetFDEpsilon(program: number, epsilon: number): void;
   errorString(error: ErrorCode): string;
   getLastErrorMessage(ctx: number): string;
 };
@@ -127,6 +131,8 @@ const createStubRuntime = (): NdcalcRuntime => {
     },
     setADMode: () => {},
     setFDEpsilon: () => {},
+    programSetADMode: () => {},
+    programSetFDEpsilon: () => {},
     errorString: (error) => ErrorCode[error] ?? "error",
     getLastErrorMessage: () => "",
   };
