@@ -1,4 +1,5 @@
 import { useAppState } from "@/state/appState";
+import type { CalculusConfig } from "@/state/appState";
 import { useCallback, useEffect } from "react";
 
 import { compileExpression } from "@/wasm/hyperviz";
@@ -9,6 +10,8 @@ export const FunctionPanel = () => {
   const setFunctionExpression = useAppState((state) => state.setFunctionExpression);
   const setFunctionValid = useAppState((state) => state.setFunctionValid);
   const triggerRecompute = useAppState((state) => state.triggerRecompute);
+  const setCalculus = useAppState((state) => state.setCalculus);
+  const calculus = useAppState((state) => state.calculus);
 
   const validateAndCompile = useCallback(
     async (expression: string) => {
@@ -45,12 +48,76 @@ export const FunctionPanel = () => {
     return () => clearTimeout(timer);
   }, [functionConfig.expression, validateAndCompile]);
 
-  const handleExampleLoad = (example: string) => {
-    setFunctionExpression(example);
+  type ExampleConfig = {
+    label: string;
+    expr: string;
+    calculus?: Partial<Pick<CalculusConfig, "showLevelSets" | "levelSetValues" | "gradientScale" | "probePoint" | "showGradient" | "showTangentPlane" | "showHessian" | "adMode">>;
   };
 
-  const examples = [
-    { label: "Sphere", expr: "x1^2 + x2^2 + x3^2 + x4^2" },
+  const applyExampleCalculusPreset = (preset?: ExampleConfig["calculus"]) => {
+    if (!preset) {
+      return;
+    }
+
+    const updates: Partial<CalculusConfig> = {};
+
+    if (preset.showLevelSets !== undefined) {
+      updates.showLevelSets = preset.showLevelSets;
+    }
+
+    if (preset.levelSetValues) {
+      updates.levelSetValues = [...preset.levelSetValues];
+    }
+
+    if (preset.showGradient !== undefined) {
+      updates.showGradient = preset.showGradient;
+    }
+
+    if (preset.showTangentPlane !== undefined) {
+      updates.showTangentPlane = preset.showTangentPlane;
+    }
+
+    if (preset.showHessian !== undefined) {
+      updates.showHessian = preset.showHessian;
+    }
+
+    if (preset.gradientScale !== undefined) {
+      updates.gradientScale = preset.gradientScale;
+    }
+
+    if (preset.probePoint) {
+      const probe = new Float32Array(dimension);
+      if (calculus.probePoint) {
+        probe.set(calculus.probePoint.subarray(0, Math.min(dimension, calculus.probePoint.length)));
+      }
+      probe.set(preset.probePoint.slice(0, dimension));
+      updates.probePoint = probe;
+    }
+
+    if (preset.adMode) {
+      updates.adMode = preset.adMode;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setCalculus(updates);
+    }
+  };
+
+  const handleExampleLoad = (example: ExampleConfig) => {
+    applyExampleCalculusPreset(example.calculus);
+    setFunctionExpression(example.expr);
+  };
+
+  const examples: ExampleConfig[] = [
+    {
+      label: "Sphere",
+      expr: "x1^2 + x2^2 + x3^2 + x4^2",
+      calculus: {
+        showLevelSets: true,
+        levelSetValues: [1],
+        probePoint: new Array(dimension).fill(0),
+      },
+    },
     { label: "Saddle", expr: "x1^2 - x2^2" },
     { label: "Wave", expr: "sin(x1) * cos(x2)" },
     { label: "Distance", expr: "sqrt(x1^2 + x2^2 + x3^2)" },
@@ -105,7 +172,7 @@ export const FunctionPanel = () => {
           {examples.map((example) => (
             <button
               key={example.label}
-              onClick={() => handleExampleLoad(example.expr)}
+              onClick={() => handleExampleLoad(example)}
               className="example-button"
             >
               {example.label}

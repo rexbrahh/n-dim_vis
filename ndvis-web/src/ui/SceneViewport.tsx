@@ -36,6 +36,7 @@ type HyperSceneProps = {
   overlays: {
     sliceGeometry: Float32Array | null;
     levelSetCurves: Float32Array[] | null;
+    levelSetPointClouds: Float32Array[] | null;
     gradientVectors: Float32Array | null;
     tangentPatch: Float32Array | null;
   };
@@ -175,6 +176,19 @@ const OverlayRenderer = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperS
               </bufferGeometry>
               <lineBasicMaterial color="#e5e5e5" />
             </line>
+          ))}
+        </group>
+      )}
+
+      {calculusConfig.showLevelSets && overlays.levelSetPointClouds && (
+        <group name="level-set-clouds">
+          {overlays.levelSetPointClouds.map((cloud, index) => (
+            <points key={`level-set-cloud-${index}`}>
+              <bufferGeometry>
+                <bufferAttribute attach="attributes-position" args={[cloud, 3]} />
+              </bufferGeometry>
+              <pointsMaterial color="#e5e5e5" size={0.06} sizeAttenuation />
+            </points>
           ))}
         </group>
       )}

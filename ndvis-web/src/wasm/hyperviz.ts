@@ -22,11 +22,23 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder("utf-8");
 const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
 const bytesPerUint32 = Uint32Array.BYTES_PER_ELEMENT;
+type Utf8Augmentable = {
+  HEAPU8?: Uint8Array;
+  lengthBytesUTF8?: (value: string) => number;
+  stringToUTF8?: (value: string, ptr: number, maxBytesToWrite: number) => void;
+  UTF8ToString?: (ptr: number) => string;
+};
+
+type MaybeWrappedUtf8Module = Utf8Augmentable & {
+  module?: Utf8Augmentable;
+};
+
 const ensureNdcalcUtf8Helpers = (
   moduleOrWrapper: StubModule | (ReturnType<typeof createNdcalcModule> extends Promise<infer R> ? R : never)
 ) => {
-  const target: any = (moduleOrWrapper as any).module ?? moduleOrWrapper;
-  const heap: Uint8Array | undefined = target.HEAPU8 ?? (moduleOrWrapper as any).HEAPU8;
+  const wrapper = moduleOrWrapper as MaybeWrappedUtf8Module;
+  const target: Utf8Augmentable = wrapper.module ?? wrapper;
+  const heap: Uint8Array | undefined = target.HEAPU8 ?? wrapper.HEAPU8;
 
   if (!target.lengthBytesUTF8) {
     target.lengthBytesUTF8 = (value: string) => textEncoder.encode(value).length;
@@ -234,6 +246,7 @@ type WasmOverlayAttempt = { success: true; overlays: OverlayState } | { success:
 const createEmptyOverlays = (): OverlayState => ({
   sliceGeometry: null,
   levelSetCurves: null,
+  levelSetPointClouds: null,
   gradientVectors: null,
   tangentPatch: null,
 });
@@ -415,26 +428,27 @@ const computeOverlaysWithWasm = async (
       overlays.tangentPatch = Float32Array.from(tangentView);
     }
 
-    if (wantsLevelSets && levelCountPtr && levelCurvesPtr && levelSizesPtr) {
-      const curveCount = module.HEAPU32[levelCountPtr >> 2];
-      if (curveCount > 0) {
-        const curves: Float32Array[] = [];
-        const curvePtrBase = levelCurvesPtr >> 2;
-        const sizePtrBase = levelSizesPtr >> 2;
-        for (let i = 0; i < Math.min(curveCount, levelCurveBuffers.length); i += 1) {
-          const curvePtr = module.HEAPU32[curvePtrBase + i];
-          const floatCount = module.HEAPU32[sizePtrBase + i];
-          if (curvePtr && floatCount > 0) {
-            const curveView = module.HEAPF32.subarray(
-              curvePtr / bytesPerFloat,
-              curvePtr / bytesPerFloat + floatCount
-            );
-            curves.push(Float32Array.from(curveView));
-          }
+  if (wantsLevelSets && levelCountPtr && levelCurvesPtr && levelSizesPtr) {
+    const curveCount = module.HEAPU32[levelCountPtr >> 2];
+    if (curveCount > 0) {
+      const curves: Float32Array[] = [];
+      const curvePtrBase = levelCurvesPtr >> 2;
+      const sizePtrBase = levelSizesPtr >> 2;
+      for (let i = 0; i < Math.min(curveCount, levelCurveBuffers.length); i += 1) {
+        const curvePtr = module.HEAPU32[curvePtrBase + i];
+        const floatCount = module.HEAPU32[sizePtrBase + i];
+        if (curvePtr && floatCount > 0) {
+          const curveView = module.HEAPF32.subarray(
+            curvePtr / bytesPerFloat,
+            curvePtr / bytesPerFloat + floatCount
+          );
+          curves.push(Float32Array.from(curveView));
         }
-        overlays.levelSetCurves = curves.length > 0 ? curves : null;
       }
+      overlays.levelSetCurves = curves.length > 0 ? curves : null;
+      overlays.levelSetPointClouds = null;
     }
+  }
 
     if (wantsSlice && !overlays.sliceGeometry) {
       overlays.sliceGeometry = new Float32Array();
@@ -524,7 +538,19 @@ const computeOverlaysCpu = async (
         }
 
         if (calculus.showLevelSets && calculus.levelSetValues.length > 0) {
-          overlays.levelSetCurves = await computeLevelSets(runtime, program, geometry, calculus.levelSetValues);
+          const curveOverlays = await computeLevelSets(runtime, program, geometry, calculus.levelSetValues);
+          overlays.levelSetCurves = curveOverlays;
+          if (!curveOverlays || curveOverlays.length === 0) {
+            const clouds = await sampleLevelSetPointClouds(
+              runtime,
+              program,
+              geometry,
+              calculus.levelSetValues
+            );
+            overlays.levelSetPointClouds = clouds && clouds.length > 0 ? clouds : null;
+          } else {
+            overlays.levelSetPointClouds = null;
+          }
         }
       } finally {
         releaseProgram(runtime, cacheKey, program);
@@ -549,7 +575,36 @@ export const computeOverlays = async (
 ): Promise<ComputeResult> => {
   const wasmAttempt = await computeOverlaysWithWasm(geometry, hyperplane, functionConfig, calculus, dimension);
   if (wasmAttempt && wasmAttempt.success) {
-    return { overlays: wasmAttempt.overlays, error: null };
+    const needsSlice = hyperplane.enabled && hyperplane.showIntersection;
+    const needsGradient =
+      calculus.showGradient && Boolean(calculus.probePoint) && functionConfig.isValid && functionConfig.expression.trim();
+    const needsTangent =
+      calculus.showTangentPlane && Boolean(calculus.probePoint) && functionConfig.isValid && functionConfig.expression.trim();
+    const needsLevelSets =
+      calculus.showLevelSets && calculus.levelSetValues.length > 0 && functionConfig.isValid && functionConfig.expression.trim();
+
+    const overlays = wasmAttempt.overlays;
+    const sliceOk = !needsSlice || (overlays.sliceGeometry && overlays.sliceGeometry.length > 0);
+    const gradientOk = !needsGradient || (overlays.gradientVectors && overlays.gradientVectors.length >= 6);
+    const tangentOk = !needsTangent || (overlays.tangentPatch && overlays.tangentPatch.length >= 12);
+    const levelOk =
+      !needsLevelSets ||
+      (overlays.levelSetCurves && overlays.levelSetCurves.some((curve) => curve.length > 0)) ||
+      (overlays.levelSetPointClouds && overlays.levelSetPointClouds.some((cloud) => cloud.length > 0));
+
+    if (sliceOk && gradientOk && tangentOk && levelOk) {
+      return { overlays, error: null };
+    }
+
+    const fallbackReason = !levelOk
+      ? "ndvis WASM level sets unavailable; using CPU fallback."
+      : !sliceOk
+        ? "ndvis WASM slice output empty; using CPU fallback."
+        : !gradientOk
+          ? "ndvis WASM gradient output empty; using CPU fallback."
+          : "ndvis WASM tangent output empty; using CPU fallback.";
+
+    return computeOverlaysCpu(geometry, hyperplane, functionConfig, calculus, dimension, fallbackReason);
   }
 
   const fallbackMessage = wasmAttempt ? wasmAttempt.error : "ndvis WASM unavailable; using CPU fallback.";
@@ -843,6 +898,103 @@ const computeLevelSets = async (
   }
 
   return curves.length ? curves : null;
+};
+
+const sampleLevelSetPointClouds = async (
+  runtime: NdcalcRuntime,
+  program: number,
+  geometry: GeometryState,
+  values: number[],
+  samplesPerAxis = 26,
+  maxPointsPerLevel = 6000
+): Promise<Float32Array[] | null> => {
+  if (!values.length) {
+    return null;
+  }
+
+  const axisCount = Math.min(3, geometry.dimension);
+  if (axisCount === 0) {
+    return null;
+  }
+
+  let extent = 0;
+  for (let axis = 0; axis < geometry.dimension; axis += 1) {
+    for (let v = 0; v < geometry.vertexCount; v += 1) {
+      extent = Math.max(extent, Math.abs(geometry.vertices[axis * geometry.vertexCount + v]));
+    }
+  }
+  if (extent === 0) {
+    extent = 1;
+  }
+
+  const start = -extent;
+  const step = (2 * extent) / Math.max(1, samplesPerAxis - 1);
+
+  const ndPoint = new Float32Array(geometry.dimension);
+  const evalInputs = new Array<number>(geometry.dimension).fill(0);
+  const results: Float32Array[] = [];
+
+  const evaluatePoint = (value: number, tolerance: number, accumulator: number[]) => {
+    for (let axis = 0; axis < geometry.dimension; axis += 1) {
+      evalInputs[axis] = ndPoint[axis];
+    }
+
+    const [err, result] = runtime.module.eval(program, evalInputs);
+    if (err === ErrorCode.OK && Math.abs(result - value) <= tolerance) {
+      const projected = projectPointTo3(geometry, ndPoint);
+      accumulator.push(projected[0], projected[1], projected[2]);
+    }
+  };
+
+  const iterateGrid = (
+    axisIndex: number,
+    value: number,
+    tolerance: number,
+    accumulator: number[]
+  ) => {
+    if (accumulator.length / 3 >= maxPointsPerLevel) {
+      return;
+    }
+
+    if (axisIndex === axisCount) {
+      for (let axis = axisCount; axis < geometry.dimension; axis += 1) {
+        ndPoint[axis] = 0;
+      }
+      evaluatePoint(value, tolerance, accumulator);
+      return;
+    }
+
+    for (let stepIndex = 0; stepIndex < samplesPerAxis; stepIndex += 1) {
+      ndPoint[axisIndex] = start + stepIndex * step;
+      iterateGrid(axisIndex + 1, value, tolerance, accumulator);
+      if (accumulator.length / 3 >= maxPointsPerLevel) {
+        return;
+      }
+    }
+  };
+
+  for (const value of values) {
+    const tolerance = Math.max(0.05, 0.1 * Math.max(1, Math.abs(value)));
+    ndPoint.fill(0);
+
+    const positions: number[] = [];
+    iterateGrid(0, value, tolerance, positions);
+
+    if (positions.length === 0 && axisCount >= 3) {
+      const relaxedPositions: number[] = [];
+      iterateGrid(0, value, tolerance * 1.5, relaxedPositions);
+      if (relaxedPositions.length > 0) {
+        results.push(Float32Array.from(relaxedPositions));
+        continue;
+      }
+    }
+
+    if (positions.length > 0) {
+      results.push(Float32Array.from(positions));
+    }
+  }
+
+  return results.length > 0 ? results : null;
 };
 
 /**

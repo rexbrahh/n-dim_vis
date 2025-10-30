@@ -53,6 +53,7 @@ export type ExportConfig = {
 export type OverlayState = {
   sliceGeometry: Float32Array | null;
   levelSetCurves: Float32Array[] | null;
+  levelSetPointClouds: Float32Array[] | null;
   gradientVectors: Float32Array | null;
   tangentPatch: Float32Array | null;
 };
@@ -260,6 +261,7 @@ export const useAppState = create<AppState>((set, get) => ({
   overlays: {
     sliceGeometry: null,
     levelSetCurves: null,
+    levelSetPointClouds: null,
     gradientVectors: null,
     tangentPatch: null,
   },

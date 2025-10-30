@@ -199,4 +199,28 @@ describe("computeOverlays", () => {
     expect(result.overlays.levelSetCurves).not.toBeNull();
     expect(result.overlays.levelSetCurves?.[0]?.length).toBeGreaterThan(0);
   });
+
+  it("falls back to point-cloud sampling for higher-dimensional spheres", async () => {
+    const dimension = 4;
+    const geometry = generateHypercubeGeometry(dimension);
+    const calculus: CalculusConfig = {
+      ...defaultCalculusConfig(dimension),
+      showLevelSets: true,
+      levelSetValues: [1],
+    };
+
+    const hyperplane = { ...createDefaultHyperplane(dimension), enabled: false };
+
+    const result = await computeOverlays(
+      geometry,
+      hyperplane,
+      createFunctionConfig("x1^2 + x2^2 + x3^2 + x4^2"),
+      calculus,
+      dimension
+    );
+
+    expect(result.error).toBeNull();
+    expect(result.overlays.levelSetPointClouds).not.toBeNull();
+    expect(result.overlays.levelSetPointClouds?.[0]?.length).toBeGreaterThan(0);
+  });
 });
