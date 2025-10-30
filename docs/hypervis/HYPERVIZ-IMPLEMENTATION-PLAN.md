@@ -13,11 +13,25 @@
 
 **Proof:** interactive n‑cube up to n=8 with 60–120 FPS; export PNG/SVG.
 
-## Phase 2 — Rotations & projection compute (2–3d)
-- Givens rotations in CPU WASM; optional WebGPU compute (`rotate_givens` + `project_to3`).
-- Periodic QR re‑orthonormalization to avoid drift.
+## Phase 2 — Rotations & projection compute (2–3d) ✅ COMPLETED
+- ✅ Givens rotations in CPU WASM with batched `apply_rotations` API
+- ✅ Periodic QR re‑orthonormalization to avoid drift (configurable cadence & threshold)
+- ✅ WebGPU compute shaders implemented (`rotate_givens` + `project_to3d`)
+- ✅ Comprehensive test suite for long rotation sequences and drift correction
+- ✅ State management with QR cadence controls (default: 100 frames, 0.01 threshold)
+- ✅ Performance profiling hooks for rotation timing and drift monitoring
+- ✅ WASM bindings initialization on app startup for native rotation functions
 
 **Proof:** smooth auto‑spin across arbitrary planes; stability over minutes.
+
+**Implementation Details:**
+- Native C++ API: `ndvis_apply_rotations()`, `ndvis_compute_orthogonality_drift()`, `ndvis_reorthonormalize()`
+- WASM bindings exported via `ndvis.ts` and initialized in `App.tsx` on startup
+- React state uses native WASM functions when available, JS fallback otherwise
+- WebGPU shaders documented with buffer layouts (see `ndvis-web/src/gpu/WEBGPU_INTERFACE.md`)
+- Struct packing: 12 bytes per rotation plane (u32 i, u32 j, f32 theta)
+- Drift metric: Frobenius norm of (R^T R - I)
+- Test coverage: 1000-step rotation sequences with automatic QR correction
 
 ## Phase 3 — Hyperplane slicing (3–4d)
 - Edge‑wise intersection CPU path; parallelized in WASM.

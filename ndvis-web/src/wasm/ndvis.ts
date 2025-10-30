@@ -19,6 +19,14 @@ export type NdvisModule = {
     calculusPtr: number,
     buffersPtr: number,
   ) => number;
+  _ndvis_apply_rotations?: (
+    matrixPtr: number,
+    order: number,
+    planesPtr: number,
+    planeCount: number,
+  ) => void;
+  _ndvis_compute_orthogonality_drift?: (matrixPtr: number, order: number) => number;
+  _ndvis_reorthonormalize?: (matrixPtr: number, order: number) => void;
   _malloc?: (bytes: number) => number;
   _free?: (ptr: number) => void;
   __ndvisStub?: boolean;
@@ -31,9 +39,18 @@ export type PcaWorkspace = {
   eigenvalues: Float32Array;
 };
 
+export type RotationPlane = {
+  i: number;
+  j: number;
+  theta: number;
+};
+
 export type NdvisBindings = {
   module: NdvisModule;
   computePca: (vertices: Float32Array, dimension: number) => PcaWorkspace;
+  applyRotations: (matrix: Float32Array, order: number, planes: RotationPlane[]) => boolean;
+  computeOrthogonalityDrift: (matrix: Float32Array, order: number) => number;
+  reorthonormalize: (matrix: Float32Array, order: number) => boolean;
 };
 
 const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
@@ -95,6 +112,7 @@ export const computePcaFallback = (dimension: number): PcaWorkspace => {
 
 export const createBindings = async (): Promise<NdvisBindings> => {
   const module = await loadNdvis();
+  
   const computePca = (vertices: Float32Array, dimension: number): PcaWorkspace => {
     if (!module._ndvis_compute_pca_with_values || !module._malloc || !module._free) {
       console.warn("ndvis WASM module missing PCA exports; falling back to identity basis");
@@ -124,7 +142,73 @@ export const createBindings = async (): Promise<NdvisBindings> => {
     return workspace;
   };
 
-  return { module, computePca };
+  const applyRotations = (matrix: Float32Array, order: number, planes: RotationPlane[]): boolean => {
+    if (!module._ndvis_apply_rotations || !module._malloc || !module._free) {
+      return false; // Signal failure so caller can fall back to JS
+    }
+
+    const matrixPtr = copyArrayToHeap(module, matrix);
+    const planesSize = planes.length * 12; // 12 bytes per plane (u32, u32, f32)
+    const planesPtr = module._malloc?.(planesSize);
+
+    if (!matrixPtr || !planesPtr) {
+      if (matrixPtr) module._free?.(matrixPtr);
+      if (planesPtr) module._free?.(planesPtr);
+      return false;
+    }
+
+    // Pack planes as u32, u32, f32 (12 bytes per plane, no padding)
+    const planesView = new Uint32Array(planes.length * 3);
+    const planesFloatView = new Float32Array(planesView.buffer);
+    for (let p = 0; p < planes.length; p += 1) {
+      planesView[p * 3] = planes[p].i;
+      planesView[p * 3 + 1] = planes[p].j;
+      planesFloatView[p * 3 + 2] = planes[p].theta;
+    }
+    module.HEAPU32.set(planesView, planesPtr / 4);
+
+    module._ndvis_apply_rotations(matrixPtr, order, planesPtr, planes.length);
+
+    // Copy result back
+    copyHeapToArray(module, matrixPtr, matrix);
+
+    module._free(matrixPtr);
+    module._free(planesPtr);
+    return true; // Success
+  };
+
+  const computeOrthogonalityDrift = (matrix: Float32Array, order: number): number => {
+    if (!module._ndvis_compute_orthogonality_drift || !module._malloc || !module._free) {
+      return -1; // Signal to caller to use JS fallback
+    }
+
+    const matrixPtr = copyArrayToHeap(module, matrix);
+    if (!matrixPtr) {
+      return -1;
+    }
+
+    const drift = module._ndvis_compute_orthogonality_drift(matrixPtr, order);
+    module._free(matrixPtr);
+    return drift;
+  };
+
+  const reorthonormalize = (matrix: Float32Array, order: number): boolean => {
+    if (!module._ndvis_reorthonormalize || !module._malloc || !module._free) {
+      return false; // Signal failure so caller can fall back to JS
+    }
+
+    const matrixPtr = copyArrayToHeap(module, matrix);
+    if (!matrixPtr) {
+      return false;
+    }
+
+    module._ndvis_reorthonormalize(matrixPtr, order);
+    copyHeapToArray(module, matrixPtr, matrix);
+    module._free(matrixPtr);
+    return true; // Success
+  };
+
+  return { module, computePca, applyRotations, computeOrthogonalityDrift, reorthonormalize };
 };
 
 const createStubModule = (): NdvisModule => ({

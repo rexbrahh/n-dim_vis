@@ -1,5 +1,5 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import { OrbitControls } from "@react-three/drei";
 import { BufferGeometry, BufferAttribute } from "three";
 
@@ -25,10 +25,50 @@ export const SceneViewport = () => {
           />
         </Suspense>
         <axesHelper args={[2]} />
-        <OrbitControls makeDefault />
+        <OrbitControls 
+          makeDefault 
+          enableDamping 
+          dampingFactor={0.05}
+          minDistance={1}
+          maxDistance={20}
+          enablePan
+          panSpeed={0.5}
+          rotateSpeed={0.5}
+          zoomSpeed={0.8}
+        />
       </Canvas>
       <ComputeStatusOverlay status={computeStatus} />
+      <CameraHelpOverlay />
     </section>
+  );
+};
+
+const CameraHelpOverlay = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <div className="camera-help-overlay">
+      <button 
+        onClick={() => setIsVisible(!isVisible)}
+        className="help-toggle"
+        title="Camera controls help"
+      >
+        ?
+      </button>
+      {isVisible && (
+        <div className="help-panel">
+          <h4>Camera Controls</h4>
+          <dl>
+            <dt>Orbit</dt>
+            <dd>Left mouse drag</dd>
+            <dt>Pan</dt>
+            <dd>Right mouse drag</dd>
+            <dt>Zoom</dt>
+            <dd>Scroll wheel</dd>
+          </dl>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -134,16 +174,43 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
     }
   }, [positions3d]);
 
+  const edgeGeometry = useMemo(() => {
+    if (!positions3d) return null;
+
+    const linePositions: number[] = [];
+    for (let e = 0; e < geometry.edgeCount; e++) {
+      const u = geometry.edges[e * 2];
+      const v = geometry.edges[e * 2 + 1];
+      
+      linePositions.push(
+        positions3d[u * 3], positions3d[u * 3 + 1], positions3d[u * 3 + 2],
+        positions3d[v * 3], positions3d[v * 3 + 1], positions3d[v * 3 + 2]
+      );
+    }
+
+    const geo = new BufferGeometry();
+    geo.setAttribute("position", new BufferAttribute(new Float32Array(linePositions), 3));
+    return geo;
+  }, [positions3d, geometry.edges, geometry.edgeCount]);
+
   return (
     <>
       <ambientLight intensity={0.5} />
       <directionalLight intensity={0.75} position={[5, 5, 5]} />
 
       {positions3d && (
-        <points>
-          <bufferGeometry ref={geometryRef} />
-          <pointsMaterial color="#f4f4f5" size={0.15} />
-        </points>
+        <>
+          <points>
+            <bufferGeometry ref={geometryRef} />
+            <pointsMaterial color="#f4f4f5" size={0.15} sizeAttenuation={false} />
+          </points>
+          
+          {edgeGeometry && (
+            <lineSegments geometry={edgeGeometry}>
+              <lineBasicMaterial color="#71717a" opacity={0.6} transparent />
+            </lineSegments>
+          )}
+        </>
       )}
 
       <OverlayRenderer

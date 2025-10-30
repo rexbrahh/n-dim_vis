@@ -4,6 +4,8 @@
 #include "ndvis/pca.hpp"
 #include "ndvis/hyperplane.hpp"
 #include "ndvis/overlays.hpp"
+#include "ndvis/rotations.hpp"
+#include "ndvis/qr.hpp"
 
 using namespace ndvis;
 
@@ -168,6 +170,23 @@ int ndvis_compute_overlays(
 
   auto result = compute_overlays(geometry_inputs, hyperplane_inputs, calculus_inputs, overlay_buffers);
   return static_cast<int>(result);
+}
+
+void ndvis_apply_rotations(float* matrix, size_t order, const NdvisRotationPlane* planes, size_t plane_count) {
+  if (matrix == nullptr || planes == nullptr) {
+    return;
+  }
+  // Convert C API structs to C++ structs
+  auto* cpp_planes = reinterpret_cast<const ndvis::RotationPlane*>(planes);
+  ndvis::apply_rotations_incremental(matrix, order, cpp_planes, plane_count);
+}
+
+float ndvis_compute_orthogonality_drift(const float* matrix, size_t order) {
+  return ndvis::compute_orthogonality_drift(matrix, order);
+}
+
+void ndvis_reorthonormalize(float* matrix, size_t order) {
+  ndvis::reorthonormalize(matrix, order);
 }
 
 }  // extern "C"
