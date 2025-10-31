@@ -14,6 +14,7 @@ set(NDCALC_SOURCES
     src/autodiff.cpp
     src/finite_diff.cpp
     src/api.cpp
+    src/latex.cpp
 )
 
 # Main library

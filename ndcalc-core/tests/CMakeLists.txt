@@ -26,3 +26,7 @@ add_test(NAME autodiff_tests COMMAND test_autodiff_only)
 add_executable(test_api_only test_api.cpp)
 target_link_libraries(test_api_only PRIVATE ndcalc)
 add_test(NAME api_tests COMMAND test_api_only)
+
+add_executable(test_latex_only test_latex.cpp)
+target_link_libraries(test_latex_only PRIVATE ndcalc)
+add_test(NAME latex_tests COMMAND test_latex_only)
