@@ -1,6 +1,6 @@
 /**
  * ndcalc - n-dimensional calculus VM and automatic differentiation
- * WASM module TypeScript declarations
+ * WASM module TypeScript declarations (auto-generated)
  */
 
 export enum ErrorCode {
@@ -10,94 +10,75 @@ export enum ErrorCode {
   EVAL = 3,
   OUT_OF_MEMORY = 4,
   INVALID_DIMENSION = 5,
-  NULL_POINTER = 6
+  NULL_POINTER = 6,
 }
 
 export enum ADMode {
   AUTO = 0,
   FORWARD = 1,
-  FINITE_DIFF = 2
+  FINITE_DIFF = 2,
+}
+
+export type CompileResult = [ErrorCode, number];
+export type EvalResult = [ErrorCode, number];
+export type EvalBatchResult = [ErrorCode, number[]];
+export type GradientResult = [ErrorCode, number[]];
+export type HessianResult = [ErrorCode, number[][]];
+
+export interface LatexError {
+  status: number;
+  message: string;
+  start: number;
+  end: number;
+}
+
+export interface LatexAsciiResult {
+  status: number;
+  value?: string;
+  error?: LatexError;
+}
+
+export interface LatexHyperplaneResult {
+  status: number;
+  coefficients?: Float32Array;
+  offset?: number;
+  error?: LatexError;
+}
+
+export interface LatexMatrixResult {
+  status: number;
+  matrix?: number[][];
+  error?: LatexError;
+}
+
+export interface LatexNormalizeResult {
+  status: number;
+  coefficients?: Float32Array;
+  offset?: number;
+  error?: LatexError;
 }
 
 export interface NdcalcModule {
-  /**
-   * Create a new computation context
-   */
+  readonly module: unknown;
   contextCreate(): number;
-
-  /**
-   * Destroy a context
-   */
   contextDestroy(ctx: number): void;
-
-  /**
-   * Compile an expression to bytecode
-   * @param ctx Context handle
-   * @param expression Mathematical expression string
-   * @param variables Array of variable names
-   * @returns [error_code, program_handle]
-   */
-  compile(ctx: number, expression: string, variables: string[]): [ErrorCode, number];
-
-  /**
-   * Destroy a compiled program
-   */
+  compile(ctx: number, expression: string, variables: string[]): CompileResult;
   programDestroy(program: number): void;
-
-  /**
-   * Evaluate expression at a point
-   * @param program Program handle
-   * @param inputs Input values (same order as variable names)
-   * @returns [error_code, result]
-   */
-  eval(program: number, inputs: number[]): [ErrorCode, number];
-
-  /**
-   * Evaluate expression at multiple points (SoA layout)
-   * @param program Program handle
-   * @param inputArrays Array of arrays, one per variable
-   * @returns [error_code, results]
-   */
-  evalBatch(program: number, inputArrays: number[][]): [ErrorCode, number[]];
-
-  /**
-   * Compute gradient using automatic differentiation
-   * @param program Program handle
-   * @param inputs Input values
-   * @returns [error_code, gradient]
-   */
-  gradient(program: number, inputs: number[]): [ErrorCode, number[]];
-
-  /**
-   * Compute Hessian matrix
-   * @param program Program handle
-   * @param inputs Input values
-   * @returns [error_code, hessian] (row-major)
-   */
-  hessian(program: number, inputs: number[]): [ErrorCode, number[]];
-
-  /**
-   * Set automatic differentiation mode
-   */
+  eval(program: number, inputs: number[]): EvalResult;
+  evalBatch(program: number, inputs: number[][]): EvalBatchResult;
+  gradient(program: number, inputs: number[]): GradientResult;
+  hessian(program: number, inputs: number[]): HessianResult;
   setADMode(ctx: number, mode: ADMode): void;
-
-  /**
-   * Set finite difference epsilon
-   */
   setFDEpsilon(ctx: number, epsilon: number): void;
-
-  /**
-   * Get error string for error code
-   */
-  errorString(error: ErrorCode): string;
-
-  /**
-   * Get last error message from context
-   */
+  programSetADMode(program: number, mode: ADMode): void;
+  programSetFDEpsilon(program: number, epsilon: number): void;
+  errorString(code: ErrorCode | number): string;
   getLastErrorMessage(ctx: number): string;
+  latexToAscii(latex: string): LatexAsciiResult;
+  latexToHyperplane(latex: string, dimension: number): LatexHyperplaneResult;
+  latexToMatrix(latex: string): LatexMatrixResult;
+  validateHyperplane(coefficients: Float32Array | number[]): boolean;
+  normalizeHyperplane(coefficients: Float32Array | number[], offset: number): LatexNormalizeResult;
 }
 
-/**
- * Create WASM module instance
- */
-export default function createNdcalcModule(): Promise<NdcalcModule>;
+export default function createNdcalcModule(options?: Record<string, unknown>): Promise<NdcalcModule>;
