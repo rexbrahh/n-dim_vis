@@ -2,6 +2,18 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 
 import type { HyperplaneConfig, FunctionConfig, CalculusConfig } from "@/state/appState";
 
+vi.mock("./ndvis-wasm.js", () => ({
+  default: () =>
+    Promise.resolve({
+      _malloc: () => 0,
+      _free: () => {},
+      HEAPF32: new Float32Array(),
+      HEAPU8: new Uint8Array(),
+      HEAPU32: new Uint32Array(),
+      HEAP32: new Int32Array(),
+    }),
+}));
+
 const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
 
 const createNdcalcStub = () => ({
@@ -104,14 +116,13 @@ describe("hyperviz wasm integration", () => {
 
     vi.doMock("@/wasm/ndvis", async (importOriginal) => {
       const actual = await importOriginal<typeof import("@/wasm/ndvis")>();
+      const fallback = actual.createFallbackBindings();
       return {
         ...actual,
         createBindings: async () => ({
+          ...fallback,
           module: moduleStub,
           computePca: (_vertices: Float32Array, dimension: number) => actual.computePcaFallback(dimension),
-          applyRotations: () => true,
-          computeOrthogonalityDrift: () => 0,
-          reorthonormalize: () => true,
         }),
       };
     });

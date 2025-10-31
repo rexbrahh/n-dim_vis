@@ -128,6 +128,18 @@ struct NdvisRotationPlane {
   float theta;
 };
 
+// Project structure-of-arrays vertices into 3D using rotation matrix and basis
+void ndvis_project_geometry(
+    const float* vertices,
+    size_t vertex_count,
+    size_t dimension,
+    const float* rotation_matrix,
+    size_t rotation_stride,
+    const float* basis3,
+    size_t basis_stride,
+    float* out_positions,
+    size_t out_length);
+
 // Apply a batch of Givens rotation planes to a rotation matrix (in-place, row-major)
 void ndvis_apply_rotations(float* matrix, size_t order, const NdvisRotationPlane* planes, size_t plane_count);
 

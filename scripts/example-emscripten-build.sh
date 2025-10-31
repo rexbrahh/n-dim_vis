@@ -23,7 +23,7 @@ emcc \
   -sWASM=1 -O3 -flto -msimd128 \
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web \
   -sALLOW_MEMORY_GROWTH=1 \
-  -sEXPORTED_FUNCTIONS='["_malloc","_free","_ndvis_compute_pca_with_values","_ndvis_compute_overlays","_ndvis_generate_hypercube"]' \
+  -sEXPORTED_FUNCTIONS='["_malloc","_free","_ndvis_compute_pca_with_values","_ndvis_compute_overlays","_ndvis_project_geometry","_ndvis_apply_rotations","_ndvis_compute_orthogonality_drift","_ndvis_reorthonormalize","_ndvis_generate_hypercube"]' \
   -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,stringToUTF8,lengthBytesUTF8,HEAPF32,HEAPU8,HEAPU32,HEAP32 \
   "${THREAD_FLAGS[@]}"
 

@@ -20,7 +20,8 @@
 ### Rotation API
 - **C API:** `ndvis_apply_rotations(matrix*, order, planes*, plane_count)`
   - Struct: `NdvisRotationPlane { u32 i, u32 j, f32 theta }` (12 bytes)
-- **WASM bindings:** `applyRotations()`, `computeOrthogonalityDrift()`, `reorthonormalize()`
+- **C API (geometry):** `ndvis_project_geometry(vertices*, vertex_count, dimension, rotation*, rotation_stride, basis*, basis_stride, out*, out_length)`
+- **WASM bindings:** `applyRotations()`, `computeOrthogonalityDrift()`, `reorthonormalize()`, `projectGeometry()`
   - Initialized on app startup via `initializeWasmBindings()` in App.tsx
   - Plane packing: 3 x 32-bit values per plane (no padding)
 - **WebGPU compute:** `rotate_givens.wgsl` parallelizes rotation across matrix rows (64 threads/workgroup)

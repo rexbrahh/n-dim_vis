@@ -1,4 +1,5 @@
-import { computePcaFallback, type PcaWorkspace, createBindings } from "@/wasm/ndvis";
+import { computePcaFallback, type PcaWorkspace, createBindings, createFallbackBindings } from "@/wasm/ndvis";
+import type { NdvisBindings } from "@/wasm/ndvis";
 import { create } from "zustand";
 
 const MAX_DIMENSION = 12;
@@ -148,6 +149,27 @@ const deriveVariance = (eigenvalues: Float32Array) => {
 
 const initialPca = computePcaFallback(4);
 
+// WASM bindings singleton - seeded with fallback implementation until real module loads
+let wasmBindings: NdvisBindings = createFallbackBindings();
+let wasmBindingsReady = false;
+
+export async function initializeWasmBindings() {
+  if (wasmBindingsReady) {
+    return wasmBindings;
+  }
+
+  try {
+    const bindings = await createBindings();
+    wasmBindings = bindings;
+    wasmBindingsReady = true;
+    console.log("[WASM] ndvis bindings initialized successfully");
+  } catch (error) {
+    console.warn("[WASM] Failed to initialize ndvis bindings, using fallback implementation", error);
+  }
+
+  return wasmBindings;
+}
+
 const createDefaultHyperplane = (dimension: number): HyperplaneConfig => ({
   enabled: false,
   coefficients: new Float32Array(dimension).fill(0),
@@ -205,7 +227,7 @@ export const useAppState = create<AppState>((set, get) => ({
     const startTime = state.rotationConfig.profilingEnabled ? performance.now() : 0;
 
     // Use native WASM rotation if available, otherwise fall back to JS
-    const rotationMatrix = applyRotationPlanesNative(
+    const { matrix: rotationMatrix, drift } = applyRotationPlanesNative(
       state.dimension,
       rotationPlanes,
       state.geometry.rotationMatrix,
@@ -214,11 +236,17 @@ export const useAppState = create<AppState>((set, get) => ({
 
     const endTime = state.rotationConfig.profilingEnabled ? performance.now() : 0;
 
-    const drift = computeOrthogonalityDrift(rotationMatrix, state.dimension);
-
     if (state.rotationConfig.profilingEnabled) {
       console.log(`[Rotation Profile] Applied ${rotationPlanes.length} planes in ${(endTime - startTime).toFixed(3)}ms, drift=${drift.toFixed(6)}`);
     }
+
+    const projectedPositions = projectGeometryNative(
+      state.geometry.vertices,
+      rotationMatrix,
+      state.geometry.basis,
+      state.dimension,
+      state.geometry.vertexCount
+    );
 
     return {
       rotationPlanes,
@@ -230,13 +258,7 @@ export const useAppState = create<AppState>((set, get) => ({
       geometry: {
         ...state.geometry,
         rotationMatrix,
-        projectedPositions: projectVerticesTo3(
-          state.geometry.vertices,
-          rotationMatrix,
-          state.geometry.basis,
-          state.dimension,
-          state.geometry.vertexCount
-        ),
+        projectedPositions,
       },
     };
   }),
@@ -274,7 +296,7 @@ export const useAppState = create<AppState>((set, get) => ({
       geometry: {
         ...state.geometry,
         basis: nextBasis3,
-        projectedPositions: projectVerticesTo3(
+        projectedPositions: projectGeometryNative(
           state.geometry.vertices,
           state.geometry.rotationMatrix,
           nextBasis3,
@@ -460,7 +482,7 @@ export function generateHypercubeGeometry(dimension: number): GeometryState {
 
   const rotationMatrix = createIdentityMatrix(cappedDimension);
   const basis = createStandardBasis3(cappedDimension);
-  const projectedPositions = projectVerticesTo3(
+  const projectedPositions = projectGeometryNative(
     vertices,
     rotationMatrix,
     basis,
@@ -498,190 +520,51 @@ function createStandardBasis3(dimension: number): Float32Array {
   return basis;
 }
 
-// WASM bindings singleton - initialized on first use
-let wasmBindings: Awaited<ReturnType<typeof createBindings>> | null = null;
-
-// Initialize WASM bindings (call this early in app lifecycle)
-export async function initializeWasmBindings() {
-  if (!wasmBindings) {
-    try {
-      wasmBindings = await createBindings();
-      console.log("[WASM] ndvis bindings initialized successfully");
-    } catch (error) {
-      console.warn("[WASM] Failed to initialize ndvis bindings, will use JS fallback", error);
-    }
-  }
-  return wasmBindings;
-}
-
 function applyRotationPlanesNative(
   dimension: number,
   planes: RotationPlane[],
   existingMatrix: Float32Array,
   config: RotationConfig
-): Float32Array {
-  // Copy existing matrix to avoid mutation
+): { matrix: Float32Array; drift: number } {
   const matrix = new Float32Array(existingMatrix);
 
-  // Try native WASM first, fall back to JS
-  let usedWasm = false;
-  if (wasmBindings) {
-    try {
-      usedWasm = wasmBindings.applyRotations(matrix, dimension, planes);
-    } catch (error) {
-      console.warn("[Rotation] WASM call threw error, falling back to JS", error);
-    }
-  }
-  
-  // Fall back to JS if WASM unavailable or failed
-  if (!usedWasm) {
-    applyRotationPlanesJS(matrix, dimension, planes);
+  try {
+    wasmBindings.applyRotations(matrix, dimension, planes);
+  } catch (error) {
+    console.warn("[Rotation] applyRotations failed; continuing with fallback result", error);
   }
 
-  // Check if QR re-orthonormalization is needed
   const frameCount = config.rotationFrameCount + 1;
   const shouldCheckDrift = config.qrCadence > 0 && frameCount % config.qrCadence === 0;
 
-  if (shouldCheckDrift || config.qrThreshold > 0) {
-    const drift = computeOrthogonalityDriftWithWasm(matrix, dimension);
+  let drift = wasmBindings.computeOrthogonalityDrift(matrix, dimension);
+
+  if (config.profilingEnabled && (shouldCheckDrift || config.qrThreshold > 0)) {
+    console.log(`[Rotation Drift] Frame ${frameCount}: drift = ${drift.toFixed(6)}`);
+  }
+
+  const thresholdTriggered = config.qrThreshold > 0 && drift > config.qrThreshold;
+  const cadenceTriggered = config.qrThreshold <= 0 && shouldCheckDrift && drift > 0;
+
+  if (thresholdTriggered || cadenceTriggered) {
+    try {
+      wasmBindings.reorthonormalize(matrix, dimension);
+    } catch (error) {
+      console.warn("[Rotation] reorthonormalize failed; leaving matrix as-is", error);
+    }
 
     if (config.profilingEnabled) {
-      console.log(`[Rotation Drift] Frame ${frameCount}: drift = ${drift.toFixed(6)}`);
+      const reason = thresholdTriggered ? `threshold ${config.qrThreshold}` : "cadence";
+      console.log(`[Rotation QR] Drift ${drift.toFixed(6)} triggered ${reason}, re-orthonormalized`);
     }
 
-    // Re-orthonormalize if threshold exceeded
-    if (drift > config.qrThreshold) {
-      reorthonormalizeWithWasm(matrix, dimension);
-      if (config.profilingEnabled) {
-        console.log(`[Rotation QR] Drift ${drift.toFixed(6)} exceeded threshold ${config.qrThreshold}, re-orthonormalized`);
-      }
-    }
+    drift = wasmBindings.computeOrthogonalityDrift(matrix, dimension);
   }
 
-  return matrix;
+  return { matrix, drift };
 }
 
-// Pure JS rotation implementation
-function applyRotationPlanesJS(matrix: Float32Array, dimension: number, planes: RotationPlane[]): void {
-  for (const plane of planes) {
-    const { i, j, theta } = plane;
-    if (i >= dimension || j >= dimension) continue;
-
-    const c = Math.cos(theta);
-    const s = Math.sin(theta);
-
-    for (let row = 0; row < dimension; row += 1) {
-      const idxI = row * dimension + i;
-      const idxJ = row * dimension + j;
-
-      const a = matrix[idxI];
-      const b = matrix[idxJ];
-
-      matrix[idxI] = c * a - s * b;
-      matrix[idxJ] = s * a + c * b;
-    }
-  }
-}
-
-function computeOrthogonalityDriftWithWasm(matrix: Float32Array, dimension: number): number {
-  if (wasmBindings) {
-    try {
-      const drift = wasmBindings.computeOrthogonalityDrift(matrix, dimension);
-      if (drift >= 0) {
-        return drift;
-      }
-    } catch {
-      // Fall through to JS
-    }
-  }
-  return computeOrthogonalityDrift(matrix, dimension);
-}
-
-function reorthonormalizeWithWasm(matrix: Float32Array, dimension: number): void {
-  let usedWasm = false;
-  if (wasmBindings) {
-    try {
-      usedWasm = wasmBindings.reorthonormalize(matrix, dimension);
-    } catch {
-      // Fall through to JS
-    }
-  }
-  
-  // Fall back to JS if WASM unavailable or failed
-  if (!usedWasm) {
-    reorthonormalizeMatrix(matrix, dimension);
-  }
-}
-
-function computeOrthogonalityDrift(matrix: Float32Array, dimension: number): number {
-  // Compute Frobenius norm of (R^T R - I)
-  // TODO: Use native WASM ndvis_compute_orthogonality_drift when available
-  let drift = 0;
-
-  for (let i = 0; i < dimension; i += 1) {
-    for (let j = 0; j < dimension; j += 1) {
-      // Compute (R^T R)_ij = sum_k R[k,i] * R[k,j]
-      let rtR_ij = 0;
-      for (let k = 0; k < dimension; k += 1) {
-        rtR_ij += matrix[k * dimension + i] * matrix[k * dimension + j];
-      }
-
-      // Subtract I_ij
-      if (i === j) {
-        rtR_ij -= 1;
-      }
-
-      drift += rtR_ij * rtR_ij;
-    }
-  }
-
-  return Math.sqrt(drift);
-}
-
-function reorthonormalizeMatrix(matrix: Float32Array, dimension: number): void {
-  // Modified Gram-Schmidt QR decomposition (in-place)
-  // TODO: Use native WASM ndvis_reorthonormalize when available
-  
-  const column = new Float32Array(dimension);
-
-  for (let col = 0; col < dimension; col += 1) {
-    // Extract column
-    for (let row = 0; row < dimension; row += 1) {
-      column[row] = matrix[row * dimension + col];
-    }
-
-    // Orthogonalize against previous columns
-    for (let prev = 0; prev < col; prev += 1) {
-      let dot = 0;
-      for (let row = 0; row < dimension; row += 1) {
-        dot += matrix[row * dimension + prev] * column[row];
-      }
-      for (let row = 0; row < dimension; row += 1) {
-        column[row] -= dot * matrix[row * dimension + prev];
-      }
-    }
-
-    // Normalize
-    let norm = 0;
-    for (let row = 0; row < dimension; row += 1) {
-      norm += column[row] * column[row];
-    }
-
-    if (norm > 0) {
-      const invNorm = 1 / Math.sqrt(norm);
-      for (let row = 0; row < dimension; row += 1) {
-        matrix[row * dimension + col] = column[row] * invNorm;
-      }
-    } else {
-      // Fallback: use standard basis vector
-      for (let row = 0; row < dimension; row += 1) {
-        matrix[row * dimension + col] = row === col ? 1 : 0;
-      }
-    }
-  }
-}
-
-function projectVerticesTo3(
+function projectGeometryNative(
   vertices: Float32Array,
   rotationMatrix: Float32Array,
   basis: Float32Array,
@@ -689,33 +572,18 @@ function projectVerticesTo3(
   vertexCount: number
 ): Float32Array {
   const out = new Float32Array(vertexCount * 3);
-  const scratch = new Float32Array(dimension);
-  const rotated = new Float32Array(dimension);
-
-  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
-    for (let axis = 0; axis < dimension; axis += 1) {
-      scratch[axis] = vertices[axis * vertexCount + vertex];
+  try {
+    const ok = wasmBindings.projectGeometry(vertices, dimension, vertexCount, rotationMatrix, basis, out);
+    if (!ok && import.meta.env.DEV) {
+      console.warn("[Geometry] projectGeometry returned false; output may be stale");
+      const fallback = createFallbackBindings();
+      fallback.projectGeometry(vertices, dimension, vertexCount, rotationMatrix, basis, out);
     }
-
-    for (let row = 0; row < dimension; row += 1) {
-      let sum = 0;
-      const rowOffset = row * dimension;
-      for (let col = 0; col < dimension; col += 1) {
-        sum += rotationMatrix[rowOffset + col] * scratch[col];
-      }
-      rotated[row] = sum;
-    }
-
-    for (let component = 0; component < 3; component += 1) {
-      let sum = 0;
-      const basisOffset = component * dimension;
-      for (let axis = 0; axis < dimension; axis += 1) {
-        sum += rotated[axis] * basis[basisOffset + axis];
-      }
-      out[vertex * 3 + component] = sum;
-    }
+  } catch (error) {
+    console.warn("[Geometry] projectGeometry threw error; returning zeroed output", error);
+    const fallback = createFallbackBindings();
+    fallback.projectGeometry(vertices, dimension, vertexCount, rotationMatrix, basis, out);
   }
-
   return out;
 }
 

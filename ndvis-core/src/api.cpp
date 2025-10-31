@@ -6,6 +6,7 @@
 #include "ndvis/overlays.hpp"
 #include "ndvis/rotations.hpp"
 #include "ndvis/qr.hpp"
+#include "ndvis/projection.hpp"
 
 using namespace ndvis;
 
@@ -46,6 +47,35 @@ std::size_t ndvis_orthoplex_edge_count(int dimension) {
 
 void ndvis_generate_orthoplex(int dimension, NdvisBuffer vertices, NdvisIndexBuffer edges) {
   generate_orthoplex(dimension, BufferView{vertices.data, vertices.length}, IndexBufferView{edges.data, edges.length});
+}
+
+void ndvis_project_geometry(
+    const float* vertices,
+    size_t vertex_count,
+    size_t dimension,
+    const float* rotation_matrix,
+    size_t rotation_stride,
+    const float* basis3,
+    size_t basis_stride,
+    float* out_positions,
+    size_t out_length) {
+  if (vertices == nullptr || rotation_matrix == nullptr || basis3 == nullptr || out_positions == nullptr) {
+    return;
+  }
+  if (vertex_count == 0 || dimension == 0) {
+    return;
+  }
+  const std::size_t required_vertices = dimension * vertex_count;
+  if (out_length < vertex_count * 3 || required_vertices == 0) {
+    return;
+  }
+
+  const std::size_t rotation_stride_use = rotation_stride == 0 ? dimension : rotation_stride;
+  const std::size_t basis_stride_use = basis_stride == 0 ? dimension : basis_stride;
+
+  ndvis::ConstBufferView vertex_view{vertices, required_vertices};
+  ndvis::ConstBasis3 basis_view{basis3, basis_stride_use, dimension};
+  ndvis::project_to_3d(vertex_view, dimension, vertex_count, rotation_matrix, rotation_stride_use, basis_view, out_positions);
 }
 
 void ndvis_compute_pca_basis(NdvisBuffer vertices, size_t vertex_count, size_t dimension, NdvisBasis3 basis) {

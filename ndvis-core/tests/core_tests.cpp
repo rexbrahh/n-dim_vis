@@ -159,6 +159,39 @@ int main() {
 
   {
     const std::size_t dimension = 3;
+    const std::size_t vertex_count = 2;
+
+    float vertices[dimension * vertex_count] = {
+        1.0f, 2.0f,
+        0.0f, 0.0f,
+        -1.0f, -2.0f,
+    };
+
+    float rotation[dimension * dimension] = {0.0f};
+    for (std::size_t i = 0; i < dimension; ++i) {
+      rotation[i * dimension + i] = 1.0f;
+    }
+
+    float basis[dimension * 3] = {0.0f};
+    for (std::size_t axis = 0; axis < dimension; ++axis) {
+      basis[axis] = (axis == 0) ? 1.0f : 0.0f;
+      basis[dimension + axis] = (axis == 1) ? 1.0f : 0.0f;
+      basis[2 * dimension + axis] = (axis == 2) ? 1.0f : 0.0f;
+    }
+
+    float projected[vertex_count * 3] = {0.0f};
+    ndvis_project_geometry(vertices, vertex_count, dimension, rotation, dimension, basis, dimension, projected, vertex_count * 3);
+
+    assert(approx_equal(projected[0], 1.0f));
+    assert(approx_equal(projected[1], 0.0f));
+    assert(approx_equal(projected[2], -1.0f));
+    assert(approx_equal(projected[3], 2.0f));
+    assert(approx_equal(projected[4], 0.0f));
+    assert(approx_equal(projected[5], -2.0f));
+  }
+
+  {
+    const std::size_t dimension = 3;
     const std::size_t vertex_count = 6;
 
     float vertices[dimension * vertex_count] = {
