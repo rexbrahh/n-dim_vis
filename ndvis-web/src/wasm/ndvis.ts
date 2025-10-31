@@ -19,6 +19,17 @@ export type NdvisModule = {
     calculusPtr: number,
     buffersPtr: number,
   ) => number;
+  _ndvis_project_geometry?: (
+    verticesPtr: number,
+    vertexCount: number,
+    dimension: number,
+    rotationPtr: number,
+    rotationStride: number,
+    basisPtr: number,
+    basisStride: number,
+    outPtr: number,
+    outLength: number,
+  ) => void;
   _ndvis_apply_rotations?: (
     matrixPtr: number,
     order: number,
@@ -51,12 +62,26 @@ export type NdvisBindings = {
   applyRotations: (matrix: Float32Array, order: number, planes: RotationPlane[]) => boolean;
   computeOrthogonalityDrift: (matrix: Float32Array, order: number) => number;
   reorthonormalize: (matrix: Float32Array, order: number) => boolean;
+  projectGeometry: (
+    vertices: Float32Array,
+    dimension: number,
+    vertexCount: number,
+    rotationMatrix: Float32Array,
+    basis: Float32Array,
+    out: Float32Array
+  ) => boolean;
 };
 
 const bytesPerFloat = Float32Array.BYTES_PER_ELEMENT;
 
 const copyArrayToHeap = (module: NdvisModule, array: Float32Array) => {
+  if (!module._malloc) {
+    return 0;
+  }
   const ptr = module._malloc(array.length * bytesPerFloat);
+  if (!ptr) {
+    return 0;
+  }
   module.HEAPF32.set(array, ptr / bytesPerFloat);
   return ptr;
 };
@@ -110,25 +135,152 @@ export const computePcaFallback = (dimension: number): PcaWorkspace => {
   return workspace;
 };
 
-export const createBindings = async (): Promise<NdvisBindings> => {
-  const module = await loadNdvis();
-  
+const applyRotationsFallback = (matrix: Float32Array, order: number, planes: RotationPlane[]): void => {
+  for (const plane of planes) {
+    const { i, j, theta } = plane;
+    if (i >= order || j >= order) {
+      continue;
+    }
+
+    const c = Math.cos(theta);
+    const s = Math.sin(theta);
+
+    for (let row = 0; row < order; row += 1) {
+      const idxI = row * order + i;
+      const idxJ = row * order + j;
+
+      const a = matrix[idxI];
+      const b = matrix[idxJ];
+
+      matrix[idxI] = c * a - s * b;
+      matrix[idxJ] = s * a + c * b;
+    }
+  }
+};
+
+const computeOrthogonalityDriftFallback = (matrix: Float32Array, dimension: number): number => {
+  let drift = 0;
+
+  for (let i = 0; i < dimension; i += 1) {
+    for (let j = 0; j < dimension; j += 1) {
+      let rtRij = 0;
+      for (let k = 0; k < dimension; k += 1) {
+        rtRij += matrix[k * dimension + i] * matrix[k * dimension + j];
+      }
+
+      if (i === j) {
+        rtRij -= 1;
+      }
+
+      drift += rtRij * rtRij;
+    }
+  }
+
+  return Math.sqrt(drift);
+};
+
+const reorthonormalizeFallback = (matrix: Float32Array, dimension: number): void => {
+  const column = new Float32Array(dimension);
+
+  for (let col = 0; col < dimension; col += 1) {
+    for (let row = 0; row < dimension; row += 1) {
+      column[row] = matrix[row * dimension + col];
+    }
+
+    for (let prev = 0; prev < col; prev += 1) {
+      let dot = 0;
+      for (let row = 0; row < dimension; row += 1) {
+        dot += matrix[row * dimension + prev] * column[row];
+      }
+      for (let row = 0; row < dimension; row += 1) {
+        column[row] -= dot * matrix[row * dimension + prev];
+      }
+    }
+
+    let norm = 0;
+    for (let row = 0; row < dimension; row += 1) {
+      norm += column[row] * column[row];
+    }
+
+    if (norm > 0) {
+      const invNorm = 1 / Math.sqrt(norm);
+      for (let row = 0; row < dimension; row += 1) {
+        matrix[row * dimension + col] = column[row] * invNorm;
+      }
+    } else {
+      for (let row = 0; row < dimension; row += 1) {
+        matrix[row * dimension + col] = row === col ? 1 : 0;
+      }
+    }
+  }
+};
+
+const projectGeometryFallback = (
+  vertices: Float32Array,
+  dimension: number,
+  vertexCount: number,
+  rotationMatrix: Float32Array,
+  basis: Float32Array,
+  out: Float32Array
+): void => {
+  if (out.length < vertexCount * 3) {
+    return;
+  }
+
+  const scratch = new Float32Array(dimension);
+  const rotated = new Float32Array(dimension);
+
+  for (let vertex = 0; vertex < vertexCount; vertex += 1) {
+    for (let axis = 0; axis < dimension; axis += 1) {
+      scratch[axis] = vertices[axis * vertexCount + vertex];
+    }
+
+    for (let row = 0; row < dimension; row += 1) {
+      let sum = 0;
+      const rowOffset = row * dimension;
+      for (let col = 0; col < dimension; col += 1) {
+        sum += rotationMatrix[rowOffset + col] * scratch[col];
+      }
+      rotated[row] = sum;
+    }
+
+    for (let component = 0; component < 3; component += 1) {
+      let sum = 0;
+      const basisOffset = component * dimension;
+      for (let axis = 0; axis < dimension; axis += 1) {
+        sum += rotated[axis] * basis[basisOffset + axis];
+      }
+      out[vertex * 3 + component] = sum;
+    }
+  }
+};
+
+const createBindingFromModule = (module: NdvisModule): NdvisBindings => {
+  const malloc = module._malloc;
+  const free = module._free;
+  const hasAlloc = typeof malloc === "function" && typeof free === "function";
+  const isStub = module.__ndvisStub === true;
+
   const computePca = (vertices: Float32Array, dimension: number): PcaWorkspace => {
-    if (!module._ndvis_compute_pca_with_values || !module._malloc || !module._free) {
-      console.warn("ndvis WASM module missing PCA exports; falling back to identity basis");
+    if (!module._ndvis_compute_pca_with_values || !hasAlloc) {
+      if (!isStub && import.meta.env.DEV) {
+        console.warn("ndvis WASM module missing PCA exports; falling back to identity basis");
+      }
       return computePcaFallback(dimension);
     }
 
     const workspace = createPcaWorkspace(dimension);
     const vertexPtr = copyArrayToHeap(module, vertices);
-    const basisPtr = module._malloc(workspace.basis.length * bytesPerFloat);
-    const eigenPtr = module._malloc(workspace.eigenvalues.length * bytesPerFloat);
+    const basisPtr = malloc!(workspace.basis.length * bytesPerFloat);
+    const eigenPtr = malloc!(workspace.eigenvalues.length * bytesPerFloat);
 
     if (!vertexPtr || !basisPtr || !eigenPtr) {
-      console.warn("ndvis WASM malloc failed; using fallback PCA");
-      if (vertexPtr) module._free(vertexPtr);
-      if (basisPtr) module._free(basisPtr);
-      if (eigenPtr) module._free(eigenPtr);
+      if (import.meta.env.DEV) {
+        console.warn("ndvis WASM malloc failed; using fallback PCA");
+      }
+      if (vertexPtr) free!(vertexPtr);
+      if (basisPtr) free!(basisPtr);
+      if (eigenPtr) free!(eigenPtr);
       return computePcaFallback(dimension);
     }
 
@@ -136,28 +288,28 @@ export const createBindings = async (): Promise<NdvisBindings> => {
     copyHeapToArray(module, basisPtr, workspace.basis);
     copyHeapToArray(module, eigenPtr, workspace.eigenvalues);
 
-    module._free(vertexPtr);
-    module._free(basisPtr);
-    module._free(eigenPtr);
+    free!(vertexPtr);
+    free!(basisPtr);
+    free!(eigenPtr);
     return workspace;
   };
 
   const applyRotations = (matrix: Float32Array, order: number, planes: RotationPlane[]): boolean => {
-    if (!module._ndvis_apply_rotations || !module._malloc || !module._free) {
-      return false; // Signal failure so caller can fall back to JS
+    if (!module._ndvis_apply_rotations || !hasAlloc || isStub) {
+      applyRotationsFallback(matrix, order, planes);
+      return true;
     }
 
     const matrixPtr = copyArrayToHeap(module, matrix);
-    const planesSize = planes.length * 12; // 12 bytes per plane (u32, u32, f32)
-    const planesPtr = module._malloc?.(planesSize);
+    const planesPtr = malloc!(planes.length * 12);
 
     if (!matrixPtr || !planesPtr) {
-      if (matrixPtr) module._free?.(matrixPtr);
-      if (planesPtr) module._free?.(planesPtr);
+      if (matrixPtr) free!(matrixPtr);
+      if (planesPtr) free!(planesPtr);
+      applyRotationsFallback(matrix, order, planes);
       return false;
     }
 
-    // Pack planes as u32, u32, f32 (12 bytes per plane, no padding)
     const planesView = new Uint32Array(planes.length * 3);
     const planesFloatView = new Float32Array(planesView.buffer);
     for (let p = 0; p < planes.length; p += 1) {
@@ -168,47 +320,95 @@ export const createBindings = async (): Promise<NdvisBindings> => {
     module.HEAPU32.set(planesView, planesPtr / 4);
 
     module._ndvis_apply_rotations(matrixPtr, order, planesPtr, planes.length);
-
-    // Copy result back
     copyHeapToArray(module, matrixPtr, matrix);
 
-    module._free(matrixPtr);
-    module._free(planesPtr);
-    return true; // Success
+    free!(matrixPtr);
+    free!(planesPtr);
+    return true;
   };
 
   const computeOrthogonalityDrift = (matrix: Float32Array, order: number): number => {
-    if (!module._ndvis_compute_orthogonality_drift || !module._malloc || !module._free) {
-      return -1; // Signal to caller to use JS fallback
+    if (!module._ndvis_compute_orthogonality_drift || !hasAlloc || isStub) {
+      return computeOrthogonalityDriftFallback(matrix, order);
     }
 
     const matrixPtr = copyArrayToHeap(module, matrix);
     if (!matrixPtr) {
-      return -1;
+      return computeOrthogonalityDriftFallback(matrix, order);
     }
 
     const drift = module._ndvis_compute_orthogonality_drift(matrixPtr, order);
-    module._free(matrixPtr);
+    free!(matrixPtr);
     return drift;
   };
 
   const reorthonormalize = (matrix: Float32Array, order: number): boolean => {
-    if (!module._ndvis_reorthonormalize || !module._malloc || !module._free) {
-      return false; // Signal failure so caller can fall back to JS
+    if (!module._ndvis_reorthonormalize || !hasAlloc || isStub) {
+      reorthonormalizeFallback(matrix, order);
+      return true;
     }
 
     const matrixPtr = copyArrayToHeap(module, matrix);
     if (!matrixPtr) {
+      reorthonormalizeFallback(matrix, order);
       return false;
     }
 
     module._ndvis_reorthonormalize(matrixPtr, order);
     copyHeapToArray(module, matrixPtr, matrix);
-    module._free(matrixPtr);
-    return true; // Success
+    free!(matrixPtr);
+    return true;
   };
 
-  return { module, computePca, applyRotations, computeOrthogonalityDrift, reorthonormalize };
+  const projectGeometry = (
+    vertices: Float32Array,
+    dimension: number,
+    vertexCount: number,
+    rotationMatrix: Float32Array,
+    basis: Float32Array,
+    out: Float32Array
+  ): boolean => {
+    if (!module._ndvis_project_geometry || !hasAlloc || isStub) {
+      projectGeometryFallback(vertices, dimension, vertexCount, rotationMatrix, basis, out);
+      return true;
+    }
+
+    const vertexPtr = copyArrayToHeap(module, vertices);
+    const rotationPtr = copyArrayToHeap(module, rotationMatrix);
+    const basisPtr = copyArrayToHeap(module, basis);
+    const outPtr = malloc!(out.length * bytesPerFloat);
+
+    if (!vertexPtr || !rotationPtr || !basisPtr || !outPtr) {
+      if (vertexPtr) free!(vertexPtr);
+      if (rotationPtr) free!(rotationPtr);
+      if (basisPtr) free!(basisPtr);
+      if (outPtr) free!(outPtr);
+      projectGeometryFallback(vertices, dimension, vertexCount, rotationMatrix, basis, out);
+      return false;
+    }
+
+    module._ndvis_project_geometry(
+      vertexPtr,
+      vertexCount,
+      dimension,
+      rotationPtr,
+      dimension,
+      basisPtr,
+      dimension,
+      outPtr,
+      out.length
+    );
+
+    copyHeapToArray(module, outPtr, out);
+
+    free!(vertexPtr);
+    free!(rotationPtr);
+    free!(basisPtr);
+    free!(outPtr);
+    return true;
+  };
+
+  return { module, computePca, applyRotations, computeOrthogonalityDrift, reorthonormalize, projectGeometry };
 };
 
 const createStubModule = (): NdvisModule => ({
@@ -268,4 +468,11 @@ export const loadNdvis: WasmLoader = async () => {
   }
 
   return modulePromise;
+};
+
+export const createFallbackBindings = (): NdvisBindings => createBindingFromModule(createStubModule());
+
+export const createBindings = async (): Promise<NdvisBindings> => {
+  const module = await loadNdvis();
+  return createBindingFromModule(module);
 };
