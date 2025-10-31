@@ -35,6 +35,7 @@ body {
   display: grid;
   grid-template-columns: 320px 12px 1fr;
   min-height: 0;
+  height: 100vh;
 }
 
 .panel-container {
@@ -191,12 +192,17 @@ body {
 .scene-viewport {
   position: relative;
   min-height: 0;
+  height: 100%;
   background: var(--bg-900);
+  overflow: hidden;
 }
 
 .scene-viewport canvas {
+  position: absolute !important;
+  inset: 0;
   width: 100% !important;
   height: 100% !important;
+  display: block !important;
 }
 
 .compute-status-overlay {
