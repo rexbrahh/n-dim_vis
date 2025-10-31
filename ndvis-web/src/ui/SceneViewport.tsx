@@ -7,6 +7,8 @@ import { useAppState } from "@/state/appState";
 import { createRenderer, type GeometryConfig, type RenderBuffers, type RendererHandle } from "@/gpu/renderer";
 import { createBindings } from "@/wasm/ndvis";
 
+const enableExperimentalRenderer = typeof import.meta !== "undefined" && import.meta.env?.VITE_NDVIS_ENABLE_EXPERIMENTAL_RENDERER === "1";
+
 export const SceneViewport = () => {
   const overlays = useAppState((state) => state.overlays);
   const computeStatus = useAppState((state) => state.computeStatus);
@@ -102,8 +104,12 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
     setPositions3d(geometry.projectedPositions);
   }, [geometry.projectedPositions]);
 
-  // Initialise renderer once
+  // Initialise optional GPU/WebGL compute renderer once (behind flag)
   useEffect(() => {
+    if (!enableExperimentalRenderer) {
+      return undefined;
+    }
+
     let mounted = true;
 
     (async () => {
@@ -131,7 +137,7 @@ const HyperScene = ({ overlays, hyperplaneEnabled, calculusConfig }: HyperSceneP
 
   // Project geometry whenever source data or renderer changes
   useEffect(() => {
-    if (!renderer) {
+    if (!enableExperimentalRenderer || !renderer) {
       return;
     }
 
